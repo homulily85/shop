@@ -14,11 +14,11 @@ $headers = empty($headers) ? new stdClass() : $headers;
 $headers = function_exists('getallheaders') ? getallheaders() : [];
 
 $request = [
-    "method" => $method,
-    "path" => $path,
-    "query" => $queryParams,
-    "body" => file_get_contents('php://input'),
-    "headers" => $headers
+    "method"  => $method,
+    "path"    => $path,
+    "query"   => $queryParams,
+    "headers" => $headers,
+    "body"    => base64_encode(file_get_contents('php://input'))
 ];
 
 error_log($uri);

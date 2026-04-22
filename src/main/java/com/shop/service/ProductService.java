@@ -1,11 +1,12 @@
 package com.shop.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.dto.ProductDTO;
 import com.shop.model.Product;
 import com.shop.redis.Client;
 import com.shop.repository.ProductRepository;
 import redis.clients.jedis.RedisClient;
-import tools.jackson.databind.ObjectMapper;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,7 +27,12 @@ public class ProductService {
     public String getAllProducts(int pageNumber, int pageSize) {
         var products = productRepository.getAllProducts(pageNumber, pageSize);
 
-        return objectMapper.writeValueAsString(products);
+        try {
+            return objectMapper.writeValueAsString(products);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
     }
 
     private String getPopularProducts() {
@@ -38,17 +44,22 @@ public class ProductService {
         Map<String, String> popularProductsMap = new HashMap<>();
         var popularProducts = productRepository.getProductByStatus("popular");
 
-        for (Product product : popularProducts) {
-            popularProductsMap.put(String.valueOf(product.id()),
-                    objectMapper.writeValueAsString(product));
-        }
+        try {
+            for (Product product : popularProducts) {
+                popularProductsMap.put(String.valueOf(product.id()),
+                        objectMapper.writeValueAsString(product));
+            }
 
-        if (!popularProductsMap.isEmpty()) {
-            redisClient.hset(POPULAR_HASH_KEY, popularProductsMap);
-            redisClient.expire(POPULAR_HASH_KEY, 3600);
-        }
+            if (!popularProductsMap.isEmpty()) {
+                redisClient.hset(POPULAR_HASH_KEY, popularProductsMap);
+                redisClient.expire(POPULAR_HASH_KEY, 3600);
+            }
 
-        return objectMapper.writeValueAsString(popularProducts);
+            return objectMapper.writeValueAsString(popularProducts);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
     }
 
     public String getProductByStatus(String status) {
@@ -58,7 +69,12 @@ public class ProductService {
 
         var products = productRepository.getProductByStatus(status);
 
-        return objectMapper.writeValueAsString(products);
+        try {
+            return objectMapper.writeValueAsString(products);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
     }
 
     public String getProductById(String id) {
@@ -72,7 +88,12 @@ public class ProductService {
                     """;
         }
 
-        return objectMapper.writeValueAsString(product);
+        try {
+            return objectMapper.writeValueAsString(product);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
     }
 
     public String createAProduct(ProductDTO productDTO) {
@@ -86,7 +107,13 @@ public class ProductService {
                     """;
         }
 
-        var createdProductJson = objectMapper.writeValueAsString(createdProduct);
+        String createdProductJson;
+        try {
+            createdProductJson = objectMapper.writeValueAsString(createdProduct);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
 
         if (redisClient.exists(POPULAR_HASH_KEY)) {
             if ("popular".equalsIgnoreCase(createdProduct.status())) {
@@ -108,7 +135,13 @@ public class ProductService {
                     """;
         }
 
-        var updatedProductJson = objectMapper.writeValueAsString(product);
+        String updatedProductJson;
+        try {
+            updatedProductJson = objectMapper.writeValueAsString(product);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
 
         if (redisClient.exists(POPULAR_HASH_KEY)) {
             if ("popular".equalsIgnoreCase(product.status())) {

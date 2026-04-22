@@ -1,11 +1,11 @@
 package com.shop.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.dto.ProductDTO;
 import com.shop.model.Product;
 import com.shop.service.ProductService;
 import com.shop.webserver.HttpResponse;
 import com.shop.webserver.HttpServer;
-import tools.jackson.databind.ObjectMapper;
 
 public class ProductController extends AbstractController {
 

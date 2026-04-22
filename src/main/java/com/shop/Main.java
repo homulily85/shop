@@ -2,6 +2,7 @@ package com.shop;
 
 import com.shop.controller.CartController;
 import com.shop.controller.ProductController;
+import com.shop.controller.UploadController;
 import com.shop.webserver.HttpResponse;
 import com.shop.webserver.HttpServer;
 
@@ -24,6 +25,9 @@ public class Main {
 
         CartController cartController = new CartController(server);
         cartController.registerRoutes();
+
+        UploadController uploadController = new UploadController(server);
+        uploadController.registerRoutes();
 
         server.start();
     }

@@ -1,6 +1,6 @@
 package com.shop.webserver;
 
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.*;
 import java.net.ServerSocket;

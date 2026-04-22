@@ -13,7 +13,11 @@ public class Main {
 
         server.addRoute("/test",
                 (method, queryParams, pathParams, headers, body) ->
-                        new HttpResponse(200, "OK", "Hello World!"));
+                        new HttpResponse(200, "OK", """
+                                {
+                                    "message": "Hello World!"
+                                }
+                                """));
 
         ProductController productController = new ProductController(server);
         productController.registerRoutes();

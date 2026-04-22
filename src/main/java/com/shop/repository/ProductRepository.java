@@ -125,7 +125,7 @@ public class ProductRepository {
             query.setObject(4, product.quantity());
             query.setObject(5, product.category());
             query.setObject(6, product.status());
-            query.setObject(7, product.id());
+            query.setObject(7, product.imageLink());
             query.setObject(8, product.id());
 
             return query.executeUpdate() > 0;
@@ -146,6 +146,7 @@ public class ProductRepository {
         try (Connection connection = DatabaseManager.getConnection(); PreparedStatement query =
                 connection.prepareStatement(sql)) {
             query.setObject(1, productId);
+            query.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
         }

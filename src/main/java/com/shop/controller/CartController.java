@@ -24,6 +24,7 @@ public class CartController extends AbstractController {
                         return new HttpResponse(200, "OK", cartService.getCartItems(pathParams.get(
                                 "id")));
                     }
+
                     case "POST" -> {
                         var objectMapper = new ObjectMapper();
 
@@ -34,15 +35,18 @@ public class CartController extends AbstractController {
 
                         return new HttpResponse(200, "OK", "{\"message\": \"Item added to cart\"}");
                     }
+
                     case "DELETE" -> {
                         var objectMapper = new ObjectMapper();
 
-                        cartService.removeItem(pathParams.get("id"), objectMapper.readValue(body,
-                                Long.class));
+                        var jsonNode = objectMapper.readTree(body);
+                        long productId = jsonNode.get("productId").asLong();
+                        cartService.removeItem(pathParams.get("id"), productId);
 
                         return new HttpResponse(200, "OK", "{\"message\": \"Item removed from " +
                                 "cart\"}");
                     }
+
                     default -> {
                         return new HttpResponse(405, "Method Not Allowed", "");
                     }

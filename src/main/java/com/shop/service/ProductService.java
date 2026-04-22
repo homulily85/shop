@@ -31,7 +31,8 @@ public class ProductService {
 
     private String getPopularProducts() {
         if (redisClient.exists(POPULAR_HASH_KEY)) {
-            return objectMapper.writeValueAsString(redisClient.hvals(POPULAR_HASH_KEY));
+            var cachedProducts = redisClient.hvals(POPULAR_HASH_KEY);
+            return "[" + String.join(",", cachedProducts) + "]";
         }
 
         Map<String, String> popularProductsMap = new HashMap<>();

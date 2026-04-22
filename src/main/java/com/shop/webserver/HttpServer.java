@@ -1,10 +1,10 @@
 package com.shop.webserver;
 
+import tools.jackson.databind.ObjectMapper;
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,65 +17,21 @@ public class HttpServer {
         this.routes = new HashMap<>();
     }
 
-    private static String parseRequestBody(BufferedReader in, int contentLength) throws IOException {
-        char[] bodyChars = new char[contentLength];
-        in.read(bodyChars, 0, contentLength);
-        return new String(bodyChars);
-    }
-
-    private static Map<String, String> parseHeaders(BufferedReader in) throws IOException {
-        Map<String, String> headers = new HashMap<>();
-        String line;
-        while ((line = in.readLine()) != null && !line.isEmpty()) {
-            int idx = line.indexOf(":");
-            if (idx != -1) {
-                String headerName = line.substring(0, idx).trim();
-                String headerValue = line.substring(idx + 1).trim();
-                headers.put(headerName, headerValue);
-
-            }
-        }
-        return headers;
-    }
-
-    private static Map<String, String> parseQueryParams(String rawPath) {
-        Map<String, String> queryParams = new HashMap<>();
-        if (rawPath.contains("?")) {
-            String queryString = rawPath.split("\\?", 2)[1];
-            for (String param : queryString.split("&")) {
-                String[] kv = param.split("=");
-                if (kv.length == 2) {
-                    queryParams.put(URLDecoder.decode(kv[0], StandardCharsets.UTF_8),
-                            URLDecoder.decode(kv[1], StandardCharsets.UTF_8));
-                }
-            }
-        }
-
-        return queryParams;
-    }
-
-    private static String formatHttpResponse(HttpResponse response) {
-        String contentType = "application/json";
-
-        return "HTTP/1.1 " + response.statusCode() + " " + response.statusMessage() + "\r\n" +
-                "Content-Type: " + contentType + "\r\n" +
-                "Content-Length: " + response.body().length() + "\r\n" +
-                "\r\n" +
-                response.body();
-    }
-
     public void addRoute(String path, RequestHandler handler) {
         routes.put(path, handler);
     }
 
-    private HttpResponse dispatch(String path, String method, Map<String, String> queryParams,
-                                  Map<String, String> headers, String body) {
+    private HttpResponse dispatch(HttpRequest httpRequest) {
 
         Map<String, String> pathParams = new HashMap<>();
-        RequestHandler handler = matchRoute(path, pathParams);
+        RequestHandler handler = matchRoute(httpRequest.path(), pathParams);
 
         if (handler != null) {
-            return handler.handle(method, queryParams, pathParams, headers, body);
+            return handler.handle(httpRequest.method(),
+                    httpRequest.query(),
+                    pathParams,
+                    httpRequest.headers(),
+                    httpRequest.body());
         } else {
             return new HttpResponse(404, "Not Found", """
                     {
@@ -145,22 +101,13 @@ public class HttpServer {
 
             if (requestLine == null || requestLine.isEmpty()) return;
 
-            String[] parts = requestLine.split(" ");
-            if (parts.length < 2) return;
+            ObjectMapper objectMapper = new ObjectMapper();
 
-            String method = parts[0]; // Method
-            String rawPath = parts[1]; // API path + queryParams
-            String pathOnly = rawPath.split("\\?")[0]; // API path
+            HttpRequest httpRequest = objectMapper.readValue(requestLine, HttpRequest.class);
 
-            Map<String, String> queryParams = parseQueryParams(rawPath);
-            Map<String, String> headers = parseHeaders(in);
-            String requestBody = parseRequestBody(in, headers.get("Content-Length") != null ?
-                    Integer.parseInt(headers.get("Content-Length")) : 0);
+            HttpResponse responseData = dispatch(httpRequest);
 
-            HttpResponse responseData = dispatch(pathOnly, method, queryParams, headers,
-                    requestBody);
-
-            String httpResponseString = formatHttpResponse(responseData);
+            String httpResponseString = objectMapper.writeValueAsString(responseData);
 
             out.write(httpResponseString);
             out.flush();

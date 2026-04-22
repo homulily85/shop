@@ -38,16 +38,6 @@ public class ProductRepository {
     }
 
     /**
-     * Get all products from the database.
-     *
-     * @return List of products.
-     */
-    public List<Product> getAllProducts() {
-        String sql = "SELECT * FROM %s".formatted(TABLE_NAME);
-        return executeProductQuery(sql);
-    }
-
-    /**
      * Get paginated products from the database.
      *
      * @return List of products.
@@ -150,17 +140,14 @@ public class ProductRepository {
      * Delete a product from the database.
      *
      * @param productId ID of the product to be deleted.
-     * @return True if the product was deleted successfully, false otherwise.
      */
-    public boolean deleteAProduct(Long productId) {
+    public void deleteAProduct(Long productId) {
         String sql = "DELETE FROM %s WHERE %s = ?".formatted(TABLE_NAME, ID);
         try (Connection connection = DatabaseManager.getConnection(); PreparedStatement query =
                 connection.prepareStatement(sql)) {
             query.setObject(1, productId);
-            return query.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
-            return false;
         }
     }
 

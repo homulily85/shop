@@ -1,0 +1,49 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: shop
+    environment:
+      - DB_URL=jdbc:mariadb://db:3306/shop
+      - DB_USERNAME=root
+      - DB_PASSWORD=root
+      - PORT=8080
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    ports:
+        - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  db:
+    container_name: shop-db
+    image: mariadb
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: shop
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  redis:
+    image: redis
+    container_name: shop-redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  db_data:

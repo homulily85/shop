@@ -1,6 +1,7 @@
 package com.shop.repository;
 
 import com.shop.database.DatabaseManager;
+import com.shop.dto.ProductDTO;
 import com.shop.model.Product;
 
 import java.sql.Connection;
@@ -82,29 +83,29 @@ public class ProductRepository {
     /**
      * Create a new product in the database.
      *
-     * @param product Product to be created.
+     * @param productDTO Product to be created.
      * @return The created product with the generated ID, or null if creation failed.
      */
-    public Product createNewProduct(Product product) {
+    public Product createNewProduct(ProductDTO productDTO) {
         String sql =
                 "INSERT INTO %s (%s, %s, %s, %s, %s, %s, %s) VALUES (?, ?, ?, ?, ?, ?, ?)".formatted(TABLE_NAME, TITLE, PRICE, DESCRIPTION, QUANTITY, CATEGORY, STATUS, IMAGE_LINK);
         try (Connection connection = DatabaseManager.getConnection(); PreparedStatement query =
                 connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
-            query.setObject(1, product.getTitle());
-            query.setObject(2, product.getPrice());
-            query.setObject(3, product.getDescription());
-            query.setObject(4, product.getQuantity());
-            query.setObject(5, product.getCategory());
-            query.setObject(6, product.getStatus());
-            query.setObject(7, product.getImageLink());
+            query.setObject(1, productDTO.title());
+            query.setObject(2, productDTO.price());
+            query.setObject(3, productDTO.description());
+            query.setObject(4, productDTO.quantity());
+            query.setObject(5, productDTO.category());
+            query.setObject(6, productDTO.status());
+            query.setObject(7, productDTO.imageLink());
 
             query.executeUpdate();
             try (ResultSet generatedKeys = query.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
                     long id = generatedKeys.getLong(ID_INDEX);
-                    return new Product(id, product.getTitle(), product.getPrice(),
-                            product.getDescription(), product.getQuantity(),
-                            product.getCategory(), product.getStatus(), product.getImageLink());
+                    return new Product(id, productDTO.title(), productDTO.price(),
+                            productDTO.description(), productDTO.quantity(), productDTO.category(),
+                            productDTO.status(), productDTO.imageLink());
                 } else {
                     throw new SQLException("Creating product failed, no ID obtained.");
                 }
@@ -128,14 +129,14 @@ public class ProductRepository {
                 CATEGORY, STATUS, IMAGE_LINK, ID);
         try (Connection connection = DatabaseManager.getConnection(); PreparedStatement query =
                 connection.prepareStatement(sql)) {
-            query.setObject(1, product.getTitle());
-            query.setObject(2, product.getPrice());
-            query.setObject(3, product.getDescription());
-            query.setObject(4, product.getQuantity());
-            query.setObject(5, product.getCategory());
-            query.setObject(6, product.getStatus());
-            query.setObject(7, product.getImageLink());
-            query.setObject(8, product.getId());
+            query.setObject(1, product.title());
+            query.setObject(2, product.price());
+            query.setObject(3, product.description());
+            query.setObject(4, product.quantity());
+            query.setObject(5, product.category());
+            query.setObject(6, product.status());
+            query.setObject(7, product.id());
+            query.setObject(8, product.id());
 
             return query.executeUpdate() > 0;
 

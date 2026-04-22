@@ -1,18 +1,20 @@
 package com.shop.service;
 
+import com.shop.dto.ProductDTO;
 import com.shop.model.Product;
 import com.shop.redis.Client;
 import com.shop.repository.ProductRepository;
 import redis.clients.jedis.RedisClient;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class ProductService {
     private static final String POPULAR_HASH_KEY = "product:popular";
     private final ProductRepository productRepository = ProductRepository.getInstance();
     private final RedisClient redisClient = Client.getRedisClient();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private ProductService() {
     }
@@ -24,20 +26,20 @@ public class ProductService {
     public String getAllProducts(int pageNumber, int pageSize) {
         var products = productRepository.getAllProducts(pageNumber, pageSize);
 
-        return toJson(products);
+        return objectMapper.writeValueAsString(products);
     }
 
     private String getPopularProducts() {
         if (redisClient.exists(POPULAR_HASH_KEY)) {
-            return redisClient.hvals(POPULAR_HASH_KEY).stream().reduce("[\n",
-                    (acc, product) -> acc + product + ",\n", String::concat).replaceAll(",\n$",
-                    "\n]");
+            return objectMapper.writeValueAsString(redisClient.hvals(POPULAR_HASH_KEY));
         }
 
         Map<String, String> popularProductsMap = new HashMap<>();
         var popularProducts = productRepository.getProductByStatus("popular");
+
         for (Product product : popularProducts) {
-            popularProductsMap.put(String.valueOf(product.getId()), product.toString());
+            popularProductsMap.put(String.valueOf(product.id()),
+                    objectMapper.writeValueAsString(product));
         }
 
         if (!popularProductsMap.isEmpty()) {
@@ -45,7 +47,7 @@ public class ProductService {
             redisClient.expire(POPULAR_HASH_KEY, 3600);
         }
 
-        return toJson(popularProducts);
+        return objectMapper.writeValueAsString(popularProducts);
     }
 
     public String getProductByStatus(String status) {
@@ -55,7 +57,7 @@ public class ProductService {
 
         var products = productRepository.getProductByStatus(status);
 
-        return toJson(products);
+        return objectMapper.writeValueAsString(products);
     }
 
     public String getProductById(String id) {
@@ -69,11 +71,11 @@ public class ProductService {
                     """;
         }
 
-        return product.toString();
+        return objectMapper.writeValueAsString(product);
     }
 
-    public String createAProduct(Product product) {
-        var createdProduct = productRepository.createNewProduct(product);
+    public String createAProduct(ProductDTO productDTO) {
+        var createdProduct = productRepository.createNewProduct(productDTO);
 
         if (createdProduct == null) {
             return """
@@ -83,14 +85,16 @@ public class ProductService {
                     """;
         }
 
+        var createdProductJson = objectMapper.writeValueAsString(createdProduct);
+
         if (redisClient.exists(POPULAR_HASH_KEY)) {
-            if ("popular".equalsIgnoreCase(createdProduct.getStatus())) {
-                redisClient.hset(POPULAR_HASH_KEY, String.valueOf(createdProduct.getId()),
-                        createdProduct.toString());
+            if ("popular".equalsIgnoreCase(createdProduct.status())) {
+                redisClient.hset(POPULAR_HASH_KEY, String.valueOf(createdProduct.id()),
+                        createdProductJson);
             }
         }
 
-        return createdProduct.toString();
+        return createdProductJson;
     }
 
     public String updateAProduct(Product product) {
@@ -103,16 +107,18 @@ public class ProductService {
                     """;
         }
 
+        var updatedProductJson = objectMapper.writeValueAsString(product);
+
         if (redisClient.exists(POPULAR_HASH_KEY)) {
-            if ("popular".equalsIgnoreCase(product.getStatus())) {
-                redisClient.hset(POPULAR_HASH_KEY, String.valueOf(product.getId()),
-                        product.toString());
+            if ("popular".equalsIgnoreCase(product.status())) {
+                redisClient.hset(POPULAR_HASH_KEY, String.valueOf(product.id()),
+                        updatedProductJson);
             } else {
-                redisClient.hdel(POPULAR_HASH_KEY, String.valueOf(product.getId()));
+                redisClient.hdel(POPULAR_HASH_KEY, String.valueOf(product.id()));
             }
         }
 
-        return product.toString();
+        return updatedProductJson;
     }
 
     public String deleteAProduct(long productId) {
@@ -121,19 +127,6 @@ public class ProductService {
         return "";
     }
 
-    private String toJson(List<Product> products) {
-        StringBuilder response = new StringBuilder("[\n");
-
-        for (int i = 0; i < products.size(); i++) {
-            response.append(products.get(i));
-            if (i != products.size() - 1) {
-                response.append(",\n");
-            } else {
-                response.append("\n]");
-            }
-        }
-        return response.toString();
-    }
 
     private static class Holder {
         private static final ProductService INSTANCE = new ProductService();

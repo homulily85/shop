@@ -1,17 +1,21 @@
 package com.shop.controller;
 
+import com.shop.dto.ProductDTO;
 import com.shop.model.Product;
 import com.shop.service.ProductService;
 import com.shop.webserver.HttpResponse;
 import com.shop.webserver.HttpServer;
+import tools.jackson.databind.ObjectMapper;
 
 public class ProductController extends AbstractController {
 
     private final ProductService productService;
+    private final ObjectMapper objectMapper;
 
     public ProductController(HttpServer server) {
         super(server);
         this.productService = ProductService.getInstance();
+        this.objectMapper = new ObjectMapper();
     }
 
     @Override
@@ -34,7 +38,8 @@ public class ProductController extends AbstractController {
                                 "{\"error\": \"Missing JSON " + "body\"}");
                     }
 
-                    var newProduct = productService.createAProduct(Product.parseProduct(body));
+                    var newProduct = productService.createAProduct(objectMapper.readValue(body,
+                            ProductDTO.class));
                     return new HttpResponse(201, "Created", newProduct);
 
                 } catch (Exception e) {
@@ -64,14 +69,15 @@ public class ProductController extends AbstractController {
                                     "{\"error\": \"Missing " + "JSON body\"}");
                         }
 
-                        var productTobeUpdated = Product.parseProduct(body);
+                        var productTobeUpdated = objectMapper.readValue(body, ProductDTO.class);
                         var productTobeUpdatedWithId = new Product(Long.parseLong(pathParams.get(
-                                "id")), productTobeUpdated.getTitle(),
-                                productTobeUpdated.getPrice(),
-                                productTobeUpdated.getDescription(),
-                                productTobeUpdated.getQuantity(),
-                                productTobeUpdated.getCategory(), productTobeUpdated.getStatus(),
-                                productTobeUpdated.getImageLink());
+                                "id")), productTobeUpdated.title(),
+                                productTobeUpdated.price(),
+                                productTobeUpdated.description(),
+                                productTobeUpdated.quantity(),
+                                productTobeUpdated.category(),
+                                productTobeUpdated.status(),
+                                productTobeUpdated.imageLink());
 
                         var updatedProduct =
                                 productService.updateAProduct(productTobeUpdatedWithId);

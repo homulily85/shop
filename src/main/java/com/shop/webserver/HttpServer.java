@@ -78,10 +78,10 @@ public class HttpServer {
             return handler.handle(method, queryParams, pathParams, headers, body);
         } else {
             return new HttpResponse(404, "Not Found", """
-                {
-                    "message": "Route not found."
-                }
-                """);
+                    {
+                        "message": "Route not found."
+                    }
+                    """);
         }
     }
 

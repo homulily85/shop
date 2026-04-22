@@ -1,11 +1,10 @@
 package com.shop.controller;
 
+import com.shop.dto.CartItemDTO;
 import com.shop.service.CartService;
-import com.shop.utility.MinimalJsonParser;
 import com.shop.webserver.HttpResponse;
 import com.shop.webserver.HttpServer;
-
-import java.util.Map;
+import tools.jackson.databind.ObjectMapper;
 
 public class CartController extends AbstractController {
     private final CartService cartService;
@@ -26,25 +25,20 @@ public class CartController extends AbstractController {
                                 "id")));
                     }
                     case "POST" -> {
-                        var parser = new MinimalJsonParser(body);
-                        @SuppressWarnings("unchecked")
-                        Map<String, Object> jsonBody = (Map<String, Object>) parser.parse();
+                        var objectMapper = new ObjectMapper();
 
-                        long productId = ((Number) jsonBody.get("productId")).longValue();
-                        long quantity = ((Number) jsonBody.get("quantity")).longValue();
+                        CartItemDTO cartItemDTO = objectMapper.readValue(body, CartItemDTO.class);
 
-                        cartService.addToCart(pathParams.get("id"), productId, quantity);
+                        cartService.addToCart(pathParams.get("id"), cartItemDTO.productId(),
+                                cartItemDTO.quantity());
 
                         return new HttpResponse(200, "OK", "{\"message\": \"Item added to cart\"}");
                     }
                     case "DELETE" -> {
-                        var parser = new MinimalJsonParser(body);
-                        @SuppressWarnings("unchecked")
-                        Map<String, Object> jsonBody = (Map<String, Object>) parser.parse();
+                        var objectMapper = new ObjectMapper();
 
-                        long productId = ((Number) jsonBody.get("productId")).longValue();
-
-                        cartService.removeItem(pathParams.get("id"), productId);
+                        cartService.removeItem(pathParams.get("id"), objectMapper.readValue(body,
+                                Long.class));
 
                         return new HttpResponse(200, "OK", "{\"message\": \"Item removed from " +
                                 "cart\"}");

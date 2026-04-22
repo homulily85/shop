@@ -1,5 +1,6 @@
 package com.shop;
 
+import com.shop.controller.CartController;
 import com.shop.controller.ProductController;
 import com.shop.webserver.HttpResponse;
 import com.shop.webserver.HttpServer;
@@ -16,6 +17,9 @@ public class Main {
 
         ProductController productController = new ProductController(server);
         productController.registerRoutes();
+
+        CartController cartController = new CartController(server);
+        cartController.registerRoutes();
 
         server.start();
     }

@@ -5,16 +5,16 @@ import com.shop.service.ProductService;
 import com.shop.webserver.HttpResponse;
 import com.shop.webserver.HttpServer;
 
-public class ProductController {
+public class ProductController extends AbstractController {
 
-    private final HttpServer server;
     private final ProductService productService;
 
     public ProductController(HttpServer server) {
-        this.server = server;
+        super(server);
         this.productService = ProductService.getInstance();
     }
 
+    @Override
     public void registerRoutes() {
         server.addRoute("/products", (method, queryParams, pathParams, headers, body) -> {
             if (method.equals("GET")) {

@@ -8,15 +8,31 @@ services:
       - DB_URL=jdbc:mariadb://db:3306/shop
       - DB_USERNAME=root
       - DB_PASSWORD=root
-      - PORT=8080
+      - PORT=12345
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-    ports:
-        - "8080:8080"
     depends_on:
       db:
         condition: service_healthy
       redis:
+        condition: service_started
+
+  php-gateway:
+    build:
+      context: ./php
+      dockerfile: Dockerfile
+    container_name: shop-php-gateway
+    environment:
+      - JAVA_HOST=app
+      - JAVA_PORT=12345
+    ports:
+      - "8081:8081"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      app:
         condition: service_started
 
   db:
@@ -42,8 +58,6 @@ services:
     image: redis
     container_name: shop-redis
     restart: always
-    ports:
-      - "6379:6379"
 
 volumes:
   db_data:

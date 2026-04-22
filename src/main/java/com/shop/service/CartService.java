@@ -17,20 +17,20 @@ public class CartService {
     }
 
     public String getCartItems(String cartId) {
-        if (redisClient.exists("cart:" + cartId)) {
-            Map<String, String> cartData = redisClient.hgetAll("cart:" + cartId);
+        Map<String, String> cartData = redisClient.hgetAll("cart:" + cartId);
 
-            return cartData.entrySet().stream()
-                    .map(entry -> String.format("""
-                                    {
-                                      "productId": %s,
-                                      "quantity": %s
-                                    }""",
-                            entry.getKey(), entry.getValue()))
-                    .collect(Collectors.joining(",\n", "[\n", "\n]"));
-        } else {
+        if (cartData.isEmpty()) {
             return "[]";
         }
+
+        return cartData.entrySet().stream()
+                .map(entry -> String.format("""
+                                {
+                                  "productId": %s,
+                                  "quantity": %s
+                                }""",
+                        entry.getKey(), entry.getValue()))
+                .collect(Collectors.joining(",\n", "[\n", "\n]"));
     }
 
     public void addToCart(String cartId, long productId, long quantity) {

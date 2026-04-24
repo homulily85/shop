@@ -1,8 +1,9 @@
 package com.shop.repository;
 
 import com.shop.database.DatabaseManager;
-import com.shop.model.OrderItem;
+import com.shop.dto.OrderDTO;
 import com.shop.model.Order;
+import com.shop.model.OrderItem;
 import com.shop.model.Product;
 
 import java.sql.Connection;
@@ -104,6 +105,76 @@ public class OrderRepository {
         } catch (SQLException e) {
             e.printStackTrace();
             return null;
+        }
+    }
+
+    public void executeCheckoutTransaction(OrderDTO order, List<OrderItem> items) {
+        String sqlUpdateProductAvailableQuantity = ("UPDATE %s SET %s = %s - ? WHERE %s = ? AND " +
+                "%s >= ?")
+                .formatted(PRODUCT_TABLE_NAME, PRODUCT_QUANTITY, PRODUCT_QUANTITY,
+                        PRODUCT_ID, PRODUCT_QUANTITY);
+
+        String sqlInsertOrder = "INSERT INTO %s (%s, %s) VALUES (?, ?)".formatted(
+                ORDER_TABLE_NAME, ORDER_CUSTOMER_ID, ORDER_TOTAL_AMOUNT);
+
+        String sqlInsetOrderItem = "INSERT INTO %s(%s, %s, %s) VALUES (?, ?, ?)".formatted(
+                ITEM_TABLE_NAME, ITEM_ORDER_ID, ITEM_PRODUCT_ID, ITEM_QUANTITY);
+
+        try (Connection connection = DatabaseManager.getConnection()) {
+            connection.setAutoCommit(false);
+
+            try (PreparedStatement stmtUpdateProductAvailableQuantity =
+                         connection.prepareStatement(sqlUpdateProductAvailableQuantity);
+                 PreparedStatement stmtInsertOrder = connection.prepareStatement(sqlInsertOrder,
+                         PreparedStatement.RETURN_GENERATED_KEYS);
+                 PreparedStatement stmtInsertOrderItem =
+                         connection.prepareStatement(sqlInsetOrderItem)) {
+
+                for (OrderItem item : items) {
+                    stmtUpdateProductAvailableQuantity.setLong(1, item.orderedQuantity());
+                    stmtUpdateProductAvailableQuantity.setLong(2, item.product().id());
+                    stmtUpdateProductAvailableQuantity.setLong(3, item.orderedQuantity());
+
+                    int affectedRows = stmtUpdateProductAvailableQuantity.executeUpdate();
+                    if (affectedRows == 0) {
+                        connection.rollback();
+                        throw new RuntimeException("Not enough stock for product ID: " + item.product().id());
+                    }
+                }
+
+                stmtInsertOrder.setLong(1, order.customerId());
+                stmtInsertOrder.setLong(2, order.totalAmount());
+                stmtInsertOrder.executeUpdate();
+
+                long orderId;
+                try (ResultSet generatedKeys = stmtInsertOrder.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        orderId = generatedKeys.getLong(1);
+                    } else {
+                        connection.rollback();
+                        throw new SQLException("Creating order failed, no ID obtained.");
+                    }
+                }
+
+                for (OrderItem item : items) {
+                    stmtInsertOrderItem.setLong(1, orderId);
+                    stmtInsertOrderItem.setLong(2, item.product().id());
+                    stmtInsertOrderItem.setLong(3, item.orderedQuantity());
+                    stmtInsertOrderItem.addBatch();
+                }
+
+                stmtInsertOrderItem.executeBatch();
+
+                connection.commit();
+
+            } catch (Exception e) {
+                connection.rollback();
+                throw new RuntimeException("Transaction failed and was rolled back: " + e.getMessage(), e);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 

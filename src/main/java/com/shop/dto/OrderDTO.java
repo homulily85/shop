@@ -1,4 +1,8 @@
 package com.shop.dto;
 
-public record OrderDTO() {
+import com.shop.model.OrderItem;
+
+import java.util.List;
+
+public record OrderDTO(long customerId, long totalAmount, List<OrderItem> items) {
 }

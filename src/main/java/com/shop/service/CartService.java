@@ -71,6 +71,10 @@ public class CartService {
         redisClient.hdel("cart:" + cartId, String.valueOf(productId));
     }
 
+    public void clearCart(String cartId) {
+        redisClient.del("cart:" + cartId);
+    }
+
     private static class Holder {
         private static final CartService INSTANCE = new CartService();
     }

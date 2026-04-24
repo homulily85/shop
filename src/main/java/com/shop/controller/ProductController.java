@@ -29,8 +29,8 @@ public class ProductController extends AbstractController {
                     return new HttpResponse(200, "OK", objectMapper.writeValueAsString(products));
                 }
 
-                int pageNumber = Integer.parseInt(headers.getOrDefault("pageNumber", "0"));
-                int pageSize = Integer.parseInt(headers.getOrDefault("pageSize", "10"));
+                int pageNumber = Integer.parseInt(queryParams.getOrDefault("pageNumber", "0"));
+                int pageSize = Integer.parseInt(queryParams.getOrDefault("pageSize", "10"));
 
                 var products = productService.getAllProducts(pageNumber, pageSize);
                 return new HttpResponse(200, "OK", objectMapper.writeValueAsString(products));

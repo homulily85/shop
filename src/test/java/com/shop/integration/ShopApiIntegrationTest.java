@@ -71,8 +71,6 @@ public class ShopApiIntegrationTest {
         Request getAllRequest = new Request.Builder()
                 .url(BASE_URL + "/products")
                 .get()
-                .addHeader("pageNumber", "0")
-                .addHeader("pageSize", "10")
                 .build();
 
         try (Response response = client.newCall(getAllRequest).execute()) {
@@ -218,6 +216,89 @@ public class ShopApiIntegrationTest {
 
         try (Response response = client.newCall(verifyReq).execute()) {
             assertEquals(404, response.code());
+        }
+    }
+
+    @Test
+    @Order(9)
+    public void testCreateProductWithInvalidData() throws IOException {
+        ObjectNode invalidProductDto = mapper.createObjectNode();
+        invalidProductDto.put("title", ""); // Invalid: title is blank
+        invalidProductDto.put("price", -500); // Invalid: negative price
+        invalidProductDto.put("description", "A product with invalid data");
+        invalidProductDto.put("quantity", -5); // Invalid: negative quantity
+        invalidProductDto.put("category", "Electronics");
+        invalidProductDto.put("status", "Available");
+        invalidProductDto.put("imageLink", "http://example.com/img.jpg");
+
+        RequestBody body = RequestBody.create(invalidProductDto.toString(), JSON);
+        Request request = new Request.Builder()
+                .url(BASE_URL + "/products")
+                .post(body)
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            assertEquals(400, response.code(), "Expected 400 Bad Request for invalid product data");
+        }
+    }
+
+    @Test
+    @Order(10)
+    public void testGetNonExistentProduct() throws IOException {
+        Request request = new Request.Builder()
+                .url(BASE_URL + "/products/999999999") // ID unlikely to exist
+                .get()
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            assertEquals(404, response.code(), "Expected 404 Not Found for missing product");
+            JsonNode responseBody = mapper.readTree(response.body().string());
+            assertEquals("Product not found.", responseBody.get("message").asText());
+        }
+    }
+
+    @Test
+    @Order(11)
+    public void testMethodNotAllowed() throws IOException {
+        // Upload controller only registers POST, so sending GET should fail
+        Request request = new Request.Builder()
+                .url(BASE_URL + "/upload")
+                .get()
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            assertEquals(405, response.code(), "Expected 405 Method Not Allowed");
+        }
+    }
+
+    @Test
+    @Order(12)
+    public void testMissingJsonBodyOnPost() throws IOException {
+        RequestBody emptyBody = RequestBody.create("", JSON);
+        Request request = new Request.Builder()
+                .url(BASE_URL + "/products")
+                .post(emptyBody)
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            assertEquals(400, response.code(), "Expected 400 Bad Request due to missing body");
+            JsonNode responseBody = mapper.readTree(response.body().string());
+            assertTrue(responseBody.has("error"));
+        }
+    }
+
+    @Test
+    @Order(13)
+    public void testNonExistentRoute() throws IOException {
+        Request request = new Request.Builder()
+                .url(BASE_URL + "/this-route-does-not-exist")
+                .get()
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            assertEquals(404, response.code(), "Expected 404 for an unregistered route");
+            JsonNode responseBody = mapper.readTree(response.body().string());
+            assertEquals("Route not found.", responseBody.get("message").asText());
         }
     }
 }

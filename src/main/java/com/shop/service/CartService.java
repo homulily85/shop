@@ -1,6 +1,7 @@
 package com.shop.service;
 
 import com.shop.dto.CartItemDTO;
+import com.shop.model.Product;
 import com.shop.redis.Client;
 import redis.clients.jedis.RedisClient;
 
@@ -11,6 +12,7 @@ import java.util.stream.Collectors;
 
 public class CartService {
     private final RedisClient redisClient = Client.getRedisClient();
+    private final ProductService productService = ProductService.getInstance();
 
     private CartService() {
     }
@@ -35,12 +37,23 @@ public class CartService {
     }
 
     public void addToCart(String cartId, long productId, long quantity) {
+        Product product = productService.getProductById(String.valueOf(productId));
+        if (product == null) {
+            throw new IllegalArgumentException("Product with ID " + productId + " does not exist.");
+        }
+
         String key = "cart:" + cartId;
         String field = String.valueOf(productId);
 
+        String currentQtyStr = redisClient.hget(key, field);
+        long currentQty = (currentQtyStr != null) ? Long.parseLong(currentQtyStr) : 0;
+
+        if (quantity > 0 && (currentQty + quantity > product.quantity())) {
+            throw new IllegalArgumentException("Cannot add to cart. Requested quantity exceeds available stock (" + product.quantity() + ").");
+        }
+
         long newQuantity = redisClient.hincrBy(key, field, quantity);
 
-        // If the quantity drops to 0 or below, remove the item entirely
         if (newQuantity <= 0) {
             redisClient.hdel(key, field);
         }

@@ -73,6 +73,17 @@ public class ProductService {
     }
 
     public Product getProductById(String id) {
+        try {
+            String cachedProductJson = redisClient.hget(POPULAR_HASH_KEY, id);
+
+            if (cachedProductJson != null) {
+                return objectMapper.readValue(cachedProductJson, Product.class);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+
         return productRepository.getProductById(Long.parseLong(id));
     }
 

@@ -1,6 +1,6 @@
 package com.shop.service;
 
-import com.shop.dto.CartItemDTO;
+import com.shop.model.CartItem;
 import com.shop.model.Product;
 import com.shop.redis.Client;
 import redis.clients.jedis.RedisClient;
@@ -21,7 +21,7 @@ public class CartService {
         return Holder.INSTANCE;
     }
 
-    public List<CartItemDTO> getCartItems(String cartId) {
+    public List<CartItem> getCartItems(String cartId) {
         Map<String, String> cartData = redisClient.hgetAll("cart:" + cartId);
 
         if (cartData.isEmpty()) {
@@ -29,10 +29,15 @@ public class CartService {
         }
 
         return cartData.entrySet().stream()
-                .map(entry -> new CartItemDTO(
-                        Long.parseLong(entry.getKey()),
-                        Long.parseLong(entry.getValue())
-                ))
+                .map(entry -> {
+                    String productIdStr = entry.getKey();
+                    long quantity = Long.parseLong(entry.getValue());
+
+                    Product product = productService.getProductById(productIdStr);
+
+                    return new CartItem(product, quantity);
+                })
+                .filter(item -> item.product() != null)
                 .collect(Collectors.toList());
     }
 
@@ -49,7 +54,8 @@ public class CartService {
         long currentQty = (currentQtyStr != null) ? Long.parseLong(currentQtyStr) : 0;
 
         if (quantity > 0 && (currentQty + quantity > product.quantity())) {
-            throw new IllegalArgumentException("Cannot add to cart. Requested quantity exceeds available stock (" + product.quantity() + ").");
+            throw new IllegalArgumentException("Cannot add to cart. Requested quantity exceeds " +
+                    "available stock (" + product.quantity() + ").");
         }
 
         long newQuantity = redisClient.hincrBy(key, field, quantity);

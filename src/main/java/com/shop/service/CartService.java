@@ -1,8 +1,11 @@
 package com.shop.service;
 
+import com.shop.dto.CartItemDTO;
 import com.shop.redis.Client;
 import redis.clients.jedis.RedisClient;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -16,21 +19,19 @@ public class CartService {
         return Holder.INSTANCE;
     }
 
-    public String getCartItems(String cartId) {
+    public List<CartItemDTO> getCartItems(String cartId) {
         Map<String, String> cartData = redisClient.hgetAll("cart:" + cartId);
 
         if (cartData.isEmpty()) {
-            return "[]";
+            return new ArrayList<>();
         }
 
         return cartData.entrySet().stream()
-                .map(entry -> String.format("""
-                                {
-                                  "productId": %s,
-                                  "quantity": %s
-                                }""",
-                        entry.getKey(), entry.getValue()))
-                .collect(Collectors.joining(",\n", "[\n", "\n]"));
+                .map(entry -> new CartItemDTO(
+                        Long.parseLong(entry.getKey()),
+                        Long.parseLong(entry.getValue())
+                ))
+                .collect(Collectors.toList());
     }
 
     public void addToCart(String cartId, long productId, long quantity) {
@@ -54,5 +55,4 @@ public class CartService {
     private static class Holder {
         private static final CartService INSTANCE = new CartService();
     }
-
 }

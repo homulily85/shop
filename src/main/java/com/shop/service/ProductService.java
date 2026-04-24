@@ -8,7 +8,9 @@ import com.shop.redis.Client;
 import com.shop.repository.ProductRepository;
 import redis.clients.jedis.RedisClient;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ProductService {
@@ -24,21 +26,22 @@ public class ProductService {
         return Holder.INSTANCE;
     }
 
-    public String getAllProducts(int pageNumber, int pageSize) {
-        var products = productRepository.getAllProducts(pageNumber, pageSize);
-
-        try {
-            return objectMapper.writeValueAsString(products);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
+    public List<Product> getAllProducts(int pageNumber, int pageSize) {
+        return productRepository.getAllProducts(pageNumber, pageSize);
     }
 
-    private String getPopularProducts() {
+    private List<Product> getPopularProducts() {
         if (redisClient.exists(POPULAR_HASH_KEY)) {
-            var cachedProducts = redisClient.hvals(POPULAR_HASH_KEY);
-            return "[" + String.join(",", cachedProducts) + "]";
+            var cachedProductsJson = redisClient.hvals(POPULAR_HASH_KEY);
+            List<Product> products = new ArrayList<>();
+            try {
+                for (String json : cachedProductsJson) {
+                    products.add(objectMapper.readValue(json, Product.class));
+                }
+                return products;
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+            }
         }
 
         Map<String, String> popularProductsMap = new HashMap<>();
@@ -46,8 +49,7 @@ public class ProductService {
 
         try {
             for (Product product : popularProducts) {
-                popularProductsMap.put(String.valueOf(product.id()),
-                        objectMapper.writeValueAsString(product));
+                popularProductsMap.put(String.valueOf(product.id()), objectMapper.writeValueAsString(product));
             }
 
             if (!popularProductsMap.isEmpty()) {
@@ -55,115 +57,69 @@ public class ProductService {
                 redisClient.expire(POPULAR_HASH_KEY, 3600);
             }
 
-            return objectMapper.writeValueAsString(popularProducts);
+            return popularProducts;
         } catch (JsonProcessingException e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
 
-    public String getProductByStatus(String status) {
+    public List<Product> getProductByStatus(String status) {
         if (status.equalsIgnoreCase("popular")) {
             return getPopularProducts();
         }
 
-        var products = productRepository.getProductByStatus(status);
-
-        try {
-            return objectMapper.writeValueAsString(products);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
+        return productRepository.getProductByStatus(status);
     }
 
-    public String getProductById(String id) {
-        var product = productRepository.getProductById(Long.parseLong(id));
-
-        if (product == null) {
-            return """
-                    {
-                        "message": "Product not found."
-                    }
-                    """;
-        }
-
-        try {
-            return objectMapper.writeValueAsString(product);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
+    public Product getProductById(String id) {
+        return productRepository.getProductById(Long.parseLong(id));
     }
 
-    public String createAProduct(ProductDTO productDTO) {
+    public Product createAProduct(ProductDTO productDTO) {
         var createdProduct = productRepository.createNewProduct(productDTO);
 
-        if (createdProduct == null) {
-            return """
-                    {
-                        "message": "Failed to create product."
-                    }
-                    """;
-        }
-
-        String createdProductJson;
-        try {
-            createdProductJson = objectMapper.writeValueAsString(createdProduct);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
-
-        if (redisClient.exists(POPULAR_HASH_KEY)) {
+        if (createdProduct != null && redisClient.exists(POPULAR_HASH_KEY)) {
             if ("popular".equalsIgnoreCase(createdProduct.status())) {
-                redisClient.hset(POPULAR_HASH_KEY, String.valueOf(createdProduct.id()),
-                        createdProductJson);
+                try {
+                    redisClient.hset(POPULAR_HASH_KEY, String.valueOf(createdProduct.id()), objectMapper.writeValueAsString(createdProduct));
+                } catch (JsonProcessingException e) {
+                    e.printStackTrace();
+                }
             }
         }
 
-        return createdProductJson;
+        return createdProduct;
     }
 
-    public String updateAProduct(Product product) {
-        var updatedProduct = productRepository.updateAProduct(product);
-        if (!updatedProduct) {
-            return """
-                    {
-                        "message": "Failed to update product."
-                    }
-                    """;
-        }
+    public Product updateAProduct(Product product) {
+        boolean updated = productRepository.updateAProduct(product);
 
-        String updatedProductJson;
-        try {
-            updatedProductJson = objectMapper.writeValueAsString(product);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
+        if (!updated) {
+            return null;
         }
 
         if (redisClient.exists(POPULAR_HASH_KEY)) {
             if ("popular".equalsIgnoreCase(product.status())) {
-                redisClient.hset(POPULAR_HASH_KEY, String.valueOf(product.id()),
-                        updatedProductJson);
+                try {
+                    redisClient.hset(POPULAR_HASH_KEY, String.valueOf(product.id()), objectMapper.writeValueAsString(product));
+                } catch (JsonProcessingException e) {
+                    e.printStackTrace();
+                }
             } else {
                 redisClient.hdel(POPULAR_HASH_KEY, String.valueOf(product.id()));
             }
         }
 
-        return updatedProductJson;
+        return product;
     }
 
-    public String deleteAProduct(long productId) {
+    public void deleteAProduct(long productId) {
         productRepository.deleteAProduct(productId);
         redisClient.hdel(POPULAR_HASH_KEY, String.valueOf(productId));
-        return "";
     }
-
 
     private static class Holder {
         private static final ProductService INSTANCE = new ProductService();
     }
-
 }

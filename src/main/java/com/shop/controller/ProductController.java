@@ -7,6 +7,8 @@ import com.shop.service.ProductService;
 import com.shop.webserver.HttpResponse;
 import com.shop.webserver.HttpServer;
 
+import java.util.Map;
+
 public class ProductController extends AbstractController {
 
     private final ProductService productService;
@@ -21,78 +23,114 @@ public class ProductController extends AbstractController {
     @Override
     public void registerRoutes() {
         server.addRoute("/products", (method, queryParams, pathParams, headers, body) -> {
-            if (method.equals("GET")) {
-                if (queryParams.containsKey("status")) {
-                    return new HttpResponse(200, "OK",
-                            productService.getProductByStatus(queryParams.get("status")));
-                }
+            try {
+                if (method.equals("GET")) {
+                    if (queryParams.containsKey("status")) {
+                        var products = productService.getProductByStatus(queryParams.get("status"));
+                        return new HttpResponse(200, "OK",
+                                objectMapper.writeValueAsString(products));
+                    }
 
-                return new HttpResponse(200, "OK",
-                        productService.getAllProducts(Integer.parseInt(headers.getOrDefault(
-                                "pageNumber", "0")), Integer.parseInt(headers.getOrDefault(
-                                "pageSize", "10"))));
-            } else if (method.equals("POST")) {
-                try {
+                    int pageNumber = Integer.parseInt(queryParams.getOrDefault("pageNumber", "0"));
+                    int pageSize = Integer.parseInt(queryParams.getOrDefault("pageSize", "10"));
+
+                    var products = productService.getAllProducts(pageNumber, pageSize);
+                    return new HttpResponse(200, "OK", objectMapper.writeValueAsString(products));
+
+                } else if (method.equals("POST")) {
                     if (body == null || body.isBlank()) {
                         return new HttpResponse(400, "Bad Request",
-                                "{\"error\": \"Missing JSON " + "body\"}");
+                                objectMapper.writeValueAsString(Map.of("error", "Missing JSON " +
+                                        "body")));
                     }
 
                     var newProduct = productService.createAProduct(objectMapper.readValue(body,
                             ProductDTO.class));
-                    return new HttpResponse(201, "Created", newProduct);
+                    if (newProduct == null) {
+                        return new HttpResponse(500, "Internal Server Error",
+                                objectMapper.writeValueAsString(Map.of("message", "Failed to " +
+                                        "create product.")));
+                    }
 
-                } catch (Exception e) {
-                    e.printStackTrace();
+                    return new HttpResponse(201, "Created",
+                            objectMapper.writeValueAsString(newProduct));
+                }
+
+                return new HttpResponse(405, "Method Not Allowed", "");
+            } catch (Exception e) {
+                e.printStackTrace();
+                try {
                     return new HttpResponse(400, "Bad Request",
-                            "{\"error\": \"%s\"}".formatted(e.getMessage()));
+                            objectMapper.writeValueAsString(Map.of("error", e.getMessage())));
+                } catch (Exception ex) {
+                    return new HttpResponse(400, "Bad Request", null);
                 }
             }
-
-            return new HttpResponse(405, "Method Not Allowed", "");
         });
 
         server.addRoute("/products/:id", (method, queryParams, pathParams, headers, body) -> {
-            switch (method) {
-                case "GET" -> {
-                    return new HttpResponse(200, "OK",
-                            productService.getProductById(pathParams.get("id")));
-                }
-                case "DELETE" -> {
-                    return new HttpResponse(200, "OK",
-                            productService.deleteAProduct(Long.parseLong(pathParams.get("id"))));
-                }
-                case "PUT" -> {
-                    try {
+            try {
+                switch (method) {
+                    case "GET" -> {
+                        var product = productService.getProductById(pathParams.get("id"));
+                        if (product == null) {
+                            return new HttpResponse(404, "Not Found",
+                                    objectMapper.writeValueAsString(Map.of("message", "Product " +
+                                            "not found.")));
+                        }
+                        return new HttpResponse(200, "OK",
+                                objectMapper.writeValueAsString(product));
+                    }
+                    case "DELETE" -> {
+                        productService.deleteAProduct(Long.parseLong(pathParams.get("id")));
+                        return new HttpResponse(200, "OK",
+                                objectMapper.writeValueAsString(Map.of("message", "Product " +
+                                        "deleted")));
+                    }
+                    case "PUT" -> {
                         if (body == null || body.isBlank()) {
                             return new HttpResponse(400, "Bad Request",
-                                    "{\"error\": \"Missing " + "JSON body\"}");
+                                    objectMapper.writeValueAsString(Map.of("error", "Missing JSON" +
+                                            " body")));
                         }
 
                         var productTobeUpdated = objectMapper.readValue(body, ProductDTO.class);
-                        var productTobeUpdatedWithId = new Product(Long.parseLong(pathParams.get(
-                                "id")), productTobeUpdated.title(),
+                        var productTobeUpdatedWithId = new Product(
+                                Long.parseLong(pathParams.get("id")),
+                                productTobeUpdated.title(),
                                 productTobeUpdated.price(),
                                 productTobeUpdated.description(),
                                 productTobeUpdated.quantity(),
                                 productTobeUpdated.category(),
                                 productTobeUpdated.status(),
-                                productTobeUpdated.imageLink());
+                                productTobeUpdated.imageLink()
+                        );
 
                         var updatedProduct =
                                 productService.updateAProduct(productTobeUpdatedWithId);
 
-                        return new HttpResponse(200, "OK", updatedProduct);
+                        if (updatedProduct == null) {
+                            return new HttpResponse(500, "Internal Server Error",
+                                    objectMapper.writeValueAsString(Map.of("message", "Failed to " +
+                                            "update product.")));
+                        }
 
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        return new HttpResponse(400, "Bad Request",
-                                "{\"error\": \"%s\"}".formatted(e.getMessage()));
+                        return new HttpResponse(200, "OK",
+                                objectMapper.writeValueAsString(updatedProduct));
+                    }
+                    default -> {
+                        return new HttpResponse(405, "Method Not Allowed", null);
                     }
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
+                try {
+                    return new HttpResponse(400, "Bad Request",
+                            objectMapper.writeValueAsString(Map.of("error", e.getMessage())));
+                } catch (Exception ex) {
+                    return new HttpResponse(400, "Bad Request", null);
+                }
             }
-
-            return new HttpResponse(405, "Method Not Allowed", "");
         });
     }
 }

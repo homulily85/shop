@@ -6,13 +6,16 @@ import com.shop.service.CartService;
 import com.shop.webserver.HttpResponse;
 import com.shop.webserver.HttpServer;
 
+import java.util.Map;
+
 public class CartController extends AbstractController {
     private final CartService cartService;
+    private final ObjectMapper objectMapper;
 
     public CartController(HttpServer server) {
         super(server);
-
         this.cartService = CartService.getInstance();
+        this.objectMapper = new ObjectMapper();
     }
 
     @Override
@@ -21,40 +24,37 @@ public class CartController extends AbstractController {
             try {
                 switch (method) {
                     case "GET" -> {
-                        return new HttpResponse(200, "OK", cartService.getCartItems(pathParams.get(
-                                "id")));
+                        var cartItems = cartService.getCartItems(pathParams.get("id"));
+                        return new HttpResponse(200, "OK",
+                                objectMapper.writeValueAsString(cartItems));
                     }
 
                     case "POST" -> {
-                        var objectMapper = new ObjectMapper();
-
                         CartItemDTO cartItemDTO = objectMapper.readValue(body, CartItemDTO.class);
-
                         cartService.addToCart(pathParams.get("id"), cartItemDTO.productId(),
                                 cartItemDTO.quantity());
-
-                        return new HttpResponse(200, "OK", "{\"message\": \"Item added to cart\"}");
+                        return new HttpResponse(200, "OK", null);
                     }
 
                     case "DELETE" -> {
-                        var objectMapper = new ObjectMapper();
-
                         var jsonNode = objectMapper.readTree(body);
                         long productId = jsonNode.get("productId").asLong();
                         cartService.removeItem(pathParams.get("id"), productId);
-
-                        return new HttpResponse(200, "OK", "{\"message\": \"Item removed from " +
-                                "cart\"}");
+                        return new HttpResponse(200, "OK", null);
                     }
 
                     default -> {
-                        return new HttpResponse(405, "Method Not Allowed", "");
+                        return new HttpResponse(405, "Method Not Allowed", null);
                     }
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-                return new HttpResponse(400, "Bad Request",
-                        "{\"error\": \"%s\"}".formatted(e.getMessage()));
+                try {
+                    return new HttpResponse(400, "Bad Request",
+                            objectMapper.writeValueAsString(Map.of("error", e.getMessage())));
+                } catch (Exception ex) {
+                    return new HttpResponse(400, "Bad Request", null);
+                }
             }
         });
     }

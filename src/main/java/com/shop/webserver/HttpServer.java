@@ -1,5 +1,6 @@
 package com.shop.webserver;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.*;
@@ -22,7 +23,6 @@ public class HttpServer {
     }
 
     private HttpResponse dispatch(HttpRequest httpRequest) {
-
         Map<String, String> pathParams = new HashMap<>();
         RequestHandler handler = matchRoute(httpRequest.path(), pathParams);
 
@@ -33,11 +33,13 @@ public class HttpServer {
                     httpRequest.headers(),
                     httpRequest.body());
         } else {
-            return new HttpResponse(404, "Not Found", """
-                    {
-                        "message": "Route not found."
-                    }
-                    """);
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                return new HttpResponse(404, "Not Found",
+                        mapper.writeValueAsString(Map.of("message", "Route not found.")));
+            } catch (JsonProcessingException e) {
+                return new HttpResponse(404, "Not Found", "");
+            }
         }
     }
 

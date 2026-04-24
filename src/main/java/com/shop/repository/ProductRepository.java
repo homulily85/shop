@@ -17,7 +17,7 @@ public class ProductRepository {
     private static final String TITLE = "title";
     private static final String PRICE = "price";
     private static final String DESCRIPTION = "description";
-    private static final String QUANTITY = "quantity";
+    private static final String QUANTITY = "available_quantity";
     private static final String CATEGORY = "category";
     private static final String STATUS = "status";
     private static final String IMAGE_LINK = "image_link";
@@ -84,7 +84,7 @@ public class ProductRepository {
             query.setObject(1, productDTO.title());
             query.setObject(2, productDTO.price());
             query.setObject(3, productDTO.description());
-            query.setObject(4, productDTO.quantity());
+            query.setObject(4, productDTO.availableQuantity());
             query.setObject(5, productDTO.category());
             query.setObject(6, productDTO.status());
             query.setObject(7, productDTO.imageLink());
@@ -94,7 +94,7 @@ public class ProductRepository {
                 if (generatedKeys.next()) {
                     long id = generatedKeys.getLong(ID_INDEX);
                     return new Product(id, productDTO.title(), productDTO.price(),
-                            productDTO.description(), productDTO.quantity(), productDTO.category(),
+                            productDTO.description(), productDTO.availableQuantity(), productDTO.category(),
                             productDTO.status(), productDTO.imageLink());
                 } else {
                     throw new SQLException("Creating product failed, no ID obtained.");
@@ -122,7 +122,7 @@ public class ProductRepository {
             query.setObject(1, product.title());
             query.setObject(2, product.price());
             query.setObject(3, product.description());
-            query.setObject(4, product.quantity());
+            query.setObject(4, product.availableQuantity());
             query.setObject(5, product.category());
             query.setObject(6, product.status());
             query.setObject(7, product.imageLink());

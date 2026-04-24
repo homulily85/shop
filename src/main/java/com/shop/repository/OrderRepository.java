@@ -18,14 +18,13 @@ public class OrderRepository {
     private static final String ORDER_ID = "id";
     private static final String ORDER_CUSTOMER_ID = "customer_id";
     private static final String ORDER_TOTAL_AMOUNT = "total_amount";
-    private static final String ORDER_STATUS = "status";
     private static final String ORDER_ID_ALIAS = "order_id";
 
     private static final String ITEM_TABLE_NAME = "order_items";
     private static final String ITEM_ALIAS = "i";
     private static final String ITEM_ORDER_ID = "order_id";
     private static final String ITEM_PRODUCT_ID = "product_id";
-    private static final String ITEM_QUANTITY = "quantity";
+    private static final String ITEM_QUANTITY = "ordered_quantity";
 
     private static final String PRODUCT_TABLE_NAME = "products";
     private static final String PRODUCT_ALIAS = "p";
@@ -33,7 +32,7 @@ public class OrderRepository {
     private static final String PRODUCT_TITLE = "title";
     private static final String PRODUCT_PRICE = "price";
     private static final String PRODUCT_DESCRIPTION = "description";
-    private static final String PRODUCT_QUANTITY = "quantity";
+    private static final String PRODUCT_QUANTITY = "available_quantity";
     private static final String PRODUCT_CATEGORY = "category";
     private static final String PRODUCT_STATUS = "status";
     private static final String PRODUCT_IMAGE_LINK = "image_link";
@@ -50,7 +49,6 @@ public class OrderRepository {
                 ORDER_ALIAS + "." + ORDER_ID + " AS " + ORDER_ID_ALIAS + ", " +
                 ORDER_ALIAS + "." + ORDER_CUSTOMER_ID + ", " +
                 ORDER_ALIAS + "." + ORDER_TOTAL_AMOUNT + ", " +
-                ORDER_ALIAS + "." + ORDER_STATUS + ", " +
                 ITEM_ALIAS + "." + ITEM_PRODUCT_ID + ", " +
                 ITEM_ALIAS + "." + ITEM_QUANTITY + ", " +
                 PRODUCT_ALIAS + "." + PRODUCT_TITLE + ", " +
@@ -81,9 +79,8 @@ public class OrderRepository {
                         long orderId = rs.getLong(ORDER_ID_ALIAS);
                         long customerId = rs.getLong(ORDER_CUSTOMER_ID);
                         long totalAmount = rs.getLong(ORDER_TOTAL_AMOUNT);
-                        String status = rs.getString(ORDER_STATUS);
 
-                        order = new Order(orderId, customerId, totalAmount, status, items);
+                        order = new Order(orderId, customerId, totalAmount, items);
                     }
 
                     long productId = rs.getLong(ITEM_PRODUCT_ID);

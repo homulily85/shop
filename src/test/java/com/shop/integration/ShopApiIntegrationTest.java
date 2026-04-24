@@ -45,7 +45,7 @@ public class ShopApiIntegrationTest {
         productDto.put("title", "Test Product");
         productDto.put("price", 1500);
         productDto.put("description", "A product for testing");
-        productDto.put("quantity", 10);
+        productDto.put("availableQuantity", 10);
         productDto.put("category", "Electronics");
         productDto.put("status", "Available");
         productDto.put("imageLink", "http://example.com/img.jpg");
@@ -119,7 +119,7 @@ public class ShopApiIntegrationTest {
         updatedProduct.put("title", "Updated Test Product");
         updatedProduct.put("price", 2000);
         updatedProduct.put("description", "Updated description");
-        updatedProduct.put("quantity", 5);
+        updatedProduct.put("availableQuantity", 5);
         updatedProduct.put("category", "Electronics");
         updatedProduct.put("status", "popular");
         updatedProduct.put("imageLink", "http://example.com/img2.jpg");
@@ -142,7 +142,7 @@ public class ShopApiIntegrationTest {
     public void testCartOperations() throws IOException {
         ObjectNode cartItemDto = mapper.createObjectNode();
         cartItemDto.put("productId", createdProductId);
-        cartItemDto.put("quantity", 2);
+        cartItemDto.put("availableQuantity", 2);
 
         RequestBody postBody = RequestBody.create(cartItemDto.toString(), JSON);
         Request postReq = new Request.Builder()
@@ -228,7 +228,7 @@ public class ShopApiIntegrationTest {
         invalidProductDto.put("title", ""); // Invalid: title is blank
         invalidProductDto.put("price", -500); // Invalid: negative price
         invalidProductDto.put("description", "A product with invalid data");
-        invalidProductDto.put("quantity", -5); // Invalid: negative quantity
+        invalidProductDto.put("availableQuantity", -5); // Invalid: negative availableQuantity
         invalidProductDto.put("category", "Electronics");
         invalidProductDto.put("status", "Available");
         invalidProductDto.put("imageLink", "http://example.com/img.jpg");
@@ -313,7 +313,7 @@ public class ShopApiIntegrationTest {
             productDto.put("title", "Pagination Test Product " + i);
             productDto.put("price", 100);
             productDto.put("description", "Temp product");
-            productDto.put("quantity", 5);
+            productDto.put("availableQuantity", 5);
             productDto.put("category", "Books");
             productDto.put("status", "Available");
             productDto.put("imageLink", "http://example.com/img.jpg");

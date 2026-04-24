@@ -53,9 +53,9 @@ public class CartService {
         String currentQtyStr = redisClient.hget(key, field);
         long currentQty = (currentQtyStr != null) ? Long.parseLong(currentQtyStr) : 0;
 
-        if (quantity > 0 && (currentQty + quantity > product.quantity())) {
-            throw new IllegalArgumentException("Cannot add to cart. Requested quantity exceeds " +
-                    "available stock (" + product.quantity() + ").");
+        if (quantity > 0 && (currentQty + quantity > product.availableQuantity())) {
+            throw new IllegalArgumentException("Cannot add to cart. Requested availableQuantity exceeds " +
+                    "available stock (" + product.availableQuantity() + ").");
         }
 
         long newQuantity = redisClient.hincrBy(key, field, quantity);

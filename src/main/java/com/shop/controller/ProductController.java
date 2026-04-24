@@ -79,7 +79,7 @@ public class ProductController extends AbstractController {
                             productTobeUpdated.title(),
                             productTobeUpdated.price(),
                             productTobeUpdated.description(),
-                            productTobeUpdated.quantity(),
+                            productTobeUpdated.availableQuantity(),
                             productTobeUpdated.category(),
                             productTobeUpdated.status(),
                             productTobeUpdated.imageLink()

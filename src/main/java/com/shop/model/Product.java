@@ -5,7 +5,7 @@ public record Product(
         String title,
         long price,
         String description,
-        long quantity,
+        long availableQuantity,
         String category,
         String status,
         String imageLink

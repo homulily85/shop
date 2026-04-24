@@ -7,6 +7,8 @@ import okhttp3.*;
 import org.junit.jupiter.api.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -260,7 +262,6 @@ public class ShopApiIntegrationTest {
     @Test
     @Order(11)
     public void testMethodNotAllowed() throws IOException {
-        // Upload controller only registers POST, so sending GET should fail
         Request request = new Request.Builder()
                 .url(BASE_URL + "/upload")
                 .get()
@@ -299,6 +300,87 @@ public class ShopApiIntegrationTest {
             assertEquals(404, response.code(), "Expected 404 for an unregistered route");
             JsonNode responseBody = mapper.readTree(response.body().string());
             assertEquals("Route not found.", responseBody.get("message").asText());
+        }
+    }
+
+    @Test
+    @Order(14)
+    public void testGetAllProductsPaginationWithExistingData() throws IOException {
+        List<Long> temporaryProductIds = new ArrayList<>();
+
+        for (int i = 0; i < 3; i++) {
+            ObjectNode productDto = mapper.createObjectNode();
+            productDto.put("title", "Pagination Test Product " + i);
+            productDto.put("price", 100);
+            productDto.put("description", "Temp product");
+            productDto.put("quantity", 5);
+            productDto.put("category", "Books");
+            productDto.put("status", "Available");
+            productDto.put("imageLink", "http://example.com/img.jpg");
+
+            RequestBody body = RequestBody.create(productDto.toString(), JSON);
+            Request request = new Request.Builder()
+                    .url(BASE_URL + "/products")
+                    .post(body)
+                    .build();
+
+            try (Response response = client.newCall(request).execute()) {
+                assertEquals(201, response.code());
+                JsonNode responseBody = mapper.readTree(response.body().string());
+                temporaryProductIds.add(responseBody.get("id").asLong());
+            }
+        }
+
+        try {
+            Request page0Request = new Request.Builder()
+                    .url(BASE_URL + "/products?pageNumber=0&pageSize=2")
+                    .get()
+                    .build();
+
+            List<Long> page0Ids = new ArrayList<>();
+            try (Response response = client.newCall(page0Request).execute()) {
+                assertEquals(200, response.code());
+                JsonNode responseBody = mapper.readTree(response.body().string());
+                assertTrue(responseBody.isArray());
+                assertEquals(2, responseBody.size(), "First page should return exactly 2 items based on pageSize limit");
+
+                for (JsonNode node : responseBody) {
+                    page0Ids.add(node.get("id").asLong());
+                }
+            }
+
+            Request page1Request = new Request.Builder()
+                    .url(BASE_URL + "/products?pageNumber=1&pageSize=2")
+                    .get()
+                    .build();
+
+            List<Long> page1Ids = new ArrayList<>();
+            try (Response response = client.newCall(page1Request).execute()) {
+                assertEquals(200, response.code());
+                JsonNode responseBody = mapper.readTree(response.body().string());
+                assertTrue(responseBody.isArray());
+
+                assertFalse(responseBody.isEmpty(), "Second page should return at least 1 item");
+                assertTrue(responseBody.size() <= 2, "Second page should not exceed the pageSize limit of 2");
+
+                for (JsonNode node : responseBody) {
+                    page1Ids.add(node.get("id").asLong());
+                }
+            }
+
+            for (Long id : page0Ids) {
+                assertFalse(page1Ids.contains(id), "Items on page 1 should be completely distinct from items on page 0");
+            }
+
+        } finally {
+            for (Long id : temporaryProductIds) {
+                Request deleteReq = new Request.Builder()
+                        .url(BASE_URL + "/products/" + id)
+                        .delete()
+                        .build();
+                try (Response response = client.newCall(deleteReq).execute()) {
+                }
+            }
         }
     }
 }

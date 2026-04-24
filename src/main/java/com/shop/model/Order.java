@@ -1,6 +1,8 @@
 package com.shop.model;
 
-public record Order(long id, long customerId, long totalAmount, String status) {
+import java.util.List;
+
+public record Order(long id, long customerId, long totalAmount, String status, List<OrderItem> items) {
 }
 
 

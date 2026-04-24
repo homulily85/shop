@@ -1,5 +1,5 @@
 package com.shop.model;
 
-public record OrderItem(long id, long orderId, long productId, int quantity) {
+public record OrderItem(long orderId, Product product, long quantity) {
 
 }

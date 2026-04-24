@@ -2,6 +2,7 @@ package com.shop;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.controller.CartController;
+import com.shop.controller.OrderController;
 import com.shop.controller.ProductController;
 import com.shop.controller.UploadController;
 import com.shop.webserver.HttpResponse;
@@ -33,6 +34,9 @@ public class Main {
 
         UploadController uploadController = new UploadController(server);
         uploadController.registerRoutes();
+
+        OrderController orderController = new OrderController(server);
+        orderController.registerRoutes();
 
         server.start();
     }

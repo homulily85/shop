@@ -1,8 +1,8 @@
 package com.shop.repository;
 
 import com.shop.database.DatabaseManager;
-import com.shop.model.Order;
 import com.shop.model.OrderItem;
+import com.shop.model.Order;
 import com.shop.model.Product;
 
 import java.sql.Connection;
@@ -96,10 +96,9 @@ public class OrderRepository {
                     String productImageLink = rs.getString(PRODUCT_IMAGE_LINK);
 
                     int quantity = rs.getInt(ITEM_QUANTITY);
-                    items.add(new OrderItem(order.id(),
-                            new Product(productId, productTitle, productPrice,
-                                    productDescription, productQuantity,
-                                    productCategory, productStatus, productImageLink)
+                    items.add(new OrderItem(new Product(productId, productTitle, productPrice,
+                            productDescription, productQuantity,
+                            productCategory, productStatus, productImageLink)
                             , quantity));
                 }
                 return order;

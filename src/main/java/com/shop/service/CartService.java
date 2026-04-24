@@ -1,6 +1,6 @@
 package com.shop.service;
 
-import com.shop.model.CartItem;
+import com.shop.model.OrderItem;
 import com.shop.model.Product;
 import com.shop.redis.Client;
 import redis.clients.jedis.RedisClient;
@@ -21,7 +21,7 @@ public class CartService {
         return Holder.INSTANCE;
     }
 
-    public List<CartItem> getCartItems(String cartId) {
+    public List<OrderItem> getCartItems(String cartId) {
         Map<String, String> cartData = redisClient.hgetAll("cart:" + cartId);
 
         if (cartData.isEmpty()) {
@@ -35,7 +35,7 @@ public class CartService {
 
                     Product product = productService.getProductById(productIdStr);
 
-                    return new CartItem(product, quantity);
+                    return new OrderItem(product, quantity);
                 })
                 .filter(item -> item.product() != null)
                 .collect(Collectors.toList());

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,11 +28,16 @@ public class HttpServer {
         RequestHandler handler = matchRoute(httpRequest.path(), pathParams);
 
         if (handler != null) {
+            byte[] decodedBody = new byte[0];
+            if (httpRequest.body() != null && !httpRequest.body().isBlank()) {
+                decodedBody = Base64.getDecoder().decode(httpRequest.body());
+            }
+
             return handler.handle(httpRequest.method(),
                     httpRequest.query(),
                     pathParams,
                     httpRequest.headers(),
-                    httpRequest.body());
+                    decodedBody);
         } else {
             try {
                 ObjectMapper mapper = new ObjectMapper();

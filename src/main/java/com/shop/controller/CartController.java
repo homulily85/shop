@@ -30,17 +30,31 @@ public class CartController extends AbstractController {
                     }
 
                     case "POST" -> {
+                        if (body == null || body.length == 0) {
+                            return new HttpResponse(400, "Bad Request",
+                                    objectMapper.writeValueAsString(Map.of("error", "Missing JSON" +
+                                            " body")));
+                        }
                         CartItemDTO cartItemDTO = objectMapper.readValue(body, CartItemDTO.class);
                         cartService.addToCart(pathParams.get("id"), cartItemDTO.productId(),
                                 cartItemDTO.quantity());
-                        return new HttpResponse(200, "OK", null);
+                        return new HttpResponse(200, "OK",
+                                objectMapper.writeValueAsString(Map.of("message", "Item added to " +
+                                        "cart")));
                     }
 
                     case "DELETE" -> {
+                        if (body == null || body.length == 0) {
+                            return new HttpResponse(400, "Bad Request",
+                                    objectMapper.writeValueAsString(Map.of("error", "Missing JSON" +
+                                            " body")));
+                        }
                         var jsonNode = objectMapper.readTree(body);
                         long productId = jsonNode.get("productId").asLong();
                         cartService.removeItem(pathParams.get("id"), productId);
-                        return new HttpResponse(200, "OK", null);
+                        return new HttpResponse(200, "OK",
+                                objectMapper.writeValueAsString(Map.of("message", "Item removed " +
+                                        "from cart")));
                     }
 
                     default -> {

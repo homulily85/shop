@@ -38,7 +38,7 @@ public class ProductController extends AbstractController {
                     return new HttpResponse(200, "OK", objectMapper.writeValueAsString(products));
 
                 } else if (method.equals("POST")) {
-                    if (body == null || body.isBlank()) {
+                    if (body == null || body.length == 0) {
                         return new HttpResponse(400, "Bad Request",
                                 objectMapper.writeValueAsString(Map.of("error", "Missing JSON " +
                                         "body")));
@@ -88,13 +88,13 @@ public class ProductController extends AbstractController {
                                         "deleted")));
                     }
                     case "PUT" -> {
-                        if (body == null || body.isBlank()) {
+                        if (body == null || body.length == 0) {
                             return new HttpResponse(400, "Bad Request",
-                                    objectMapper.writeValueAsString(Map.of("error", "Missing JSON" +
-                                            " body")));
+                                    objectMapper.writeValueAsString(Map.of("error", "Missing JSON body")));
                         }
 
                         var productTobeUpdated = objectMapper.readValue(body, ProductDTO.class);
+
                         var productTobeUpdatedWithId = new Product(
                                 Long.parseLong(pathParams.get("id")),
                                 productTobeUpdated.title(),

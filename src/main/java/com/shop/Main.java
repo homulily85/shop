@@ -18,7 +18,8 @@ public class Main {
         server.addRoute("/test",
                 (method, queryParams, pathParams, headers, body) -> {
                     try {
-                        return new HttpResponse(200, "OK", mapper.writeValueAsString(Map.of("message", "Hello World!")));
+                        return new HttpResponse(200, "OK", mapper.writeValueAsString(Map.of(
+                                "message", "Hello World!")));
                     } catch (Exception e) {
                         return new HttpResponse(500, "Internal Server Error", "");
                     }

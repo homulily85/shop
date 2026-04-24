@@ -23,112 +23,79 @@ public class ProductController extends AbstractController {
     @Override
     public void registerRoutes() {
         server.addRoute("/products", (method, queryParams, pathParams, headers, body) -> {
-            try {
-                if (method.equals("GET")) {
-                    if (queryParams.containsKey("status")) {
-                        var products = productService.getProductByStatus(queryParams.get("status"));
-                        return new HttpResponse(200, "OK",
-                                objectMapper.writeValueAsString(products));
-                    }
-
-                    int pageNumber = Integer.parseInt(queryParams.getOrDefault("pageNumber", "0"));
-                    int pageSize = Integer.parseInt(queryParams.getOrDefault("pageSize", "10"));
-
-                    var products = productService.getAllProducts(pageNumber, pageSize);
+            if (method.equals("GET")) {
+                if (queryParams.containsKey("status")) {
+                    var products = productService.getProductByStatus(queryParams.get("status"));
                     return new HttpResponse(200, "OK", objectMapper.writeValueAsString(products));
-
-                } else if (method.equals("POST")) {
-                    if (body == null || body.length == 0) {
-                        return new HttpResponse(400, "Bad Request",
-                                objectMapper.writeValueAsString(Map.of("error", "Missing JSON " +
-                                        "body")));
-                    }
-
-                    var newProduct = productService.createAProduct(objectMapper.readValue(body,
-                            ProductDTO.class));
-                    if (newProduct == null) {
-                        return new HttpResponse(500, "Internal Server Error",
-                                objectMapper.writeValueAsString(Map.of("message", "Failed to " +
-                                        "create product.")));
-                    }
-
-                    return new HttpResponse(201, "Created",
-                            objectMapper.writeValueAsString(newProduct));
                 }
 
-                return new HttpResponse(405, "Method Not Allowed", "");
-            } catch (Exception e) {
-                e.printStackTrace();
-                try {
-                    return new HttpResponse(400, "Bad Request",
-                            objectMapper.writeValueAsString(Map.of("error", e.getMessage())));
-                } catch (Exception ex) {
-                    return new HttpResponse(400, "Bad Request", null);
+                int pageNumber = Integer.parseInt(headers.getOrDefault("pageNumber", "0"));
+                int pageSize = Integer.parseInt(headers.getOrDefault("pageSize", "10"));
+
+                var products = productService.getAllProducts(pageNumber, pageSize);
+                return new HttpResponse(200, "OK", objectMapper.writeValueAsString(products));
+
+            } else if (method.equals("POST")) {
+                if (body == null || body.length == 0) {
+                    throw new IllegalArgumentException("Missing JSON body");
                 }
+
+                var newProduct = productService.createAProduct(objectMapper.readValue(body,
+                        ProductDTO.class));
+                if (newProduct == null) {
+                    throw new RuntimeException("Failed to create product.");
+                }
+
+                return new HttpResponse(201, "Created",
+                        objectMapper.writeValueAsString(newProduct));
             }
+
+            return new HttpResponse(405, "Method Not Allowed", "");
         });
 
         server.addRoute("/products/:id", (method, queryParams, pathParams, headers, body) -> {
-            try {
-                switch (method) {
-                    case "GET" -> {
-                        var product = productService.getProductById(pathParams.get("id"));
-                        if (product == null) {
-                            return new HttpResponse(404, "Not Found",
-                                    objectMapper.writeValueAsString(Map.of("message", "Product " +
-                                            "not found.")));
-                        }
-                        return new HttpResponse(200, "OK",
-                                objectMapper.writeValueAsString(product));
+            switch (method) {
+                case "GET" -> {
+                    var product = productService.getProductById(pathParams.get("id"));
+                    if (product == null) {
+                        return new HttpResponse(404, "Not Found",
+                                objectMapper.writeValueAsString(Map.of("message", "Product not " +
+                                        "found.")));
                     }
-                    case "DELETE" -> {
-                        productService.deleteAProduct(Long.parseLong(pathParams.get("id")));
-                        return new HttpResponse(200, "OK",
-                                objectMapper.writeValueAsString(Map.of("message", "Product " +
-                                        "deleted")));
-                    }
-                    case "PUT" -> {
-                        if (body == null || body.length == 0) {
-                            return new HttpResponse(400, "Bad Request",
-                                    objectMapper.writeValueAsString(Map.of("error", "Missing JSON body")));
-                        }
-
-                        var productTobeUpdated = objectMapper.readValue(body, ProductDTO.class);
-
-                        var productTobeUpdatedWithId = new Product(
-                                Long.parseLong(pathParams.get("id")),
-                                productTobeUpdated.title(),
-                                productTobeUpdated.price(),
-                                productTobeUpdated.description(),
-                                productTobeUpdated.quantity(),
-                                productTobeUpdated.category(),
-                                productTobeUpdated.status(),
-                                productTobeUpdated.imageLink()
-                        );
-
-                        var updatedProduct =
-                                productService.updateAProduct(productTobeUpdatedWithId);
-
-                        if (updatedProduct == null) {
-                            return new HttpResponse(500, "Internal Server Error",
-                                    objectMapper.writeValueAsString(Map.of("message", "Failed to " +
-                                            "update product.")));
-                        }
-
-                        return new HttpResponse(200, "OK",
-                                objectMapper.writeValueAsString(updatedProduct));
-                    }
-                    default -> {
-                        return new HttpResponse(405, "Method Not Allowed", null);
-                    }
+                    return new HttpResponse(200, "OK", objectMapper.writeValueAsString(product));
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
-                try {
-                    return new HttpResponse(400, "Bad Request",
-                            objectMapper.writeValueAsString(Map.of("error", e.getMessage())));
-                } catch (Exception ex) {
-                    return new HttpResponse(400, "Bad Request", null);
+                case "DELETE" -> {
+                    productService.deleteAProduct(Long.parseLong(pathParams.get("id")));
+                    return new HttpResponse(200, "OK", null);
+                }
+                case "PUT" -> {
+                    if (body == null || body.length == 0) {
+                        throw new IllegalArgumentException("Missing JSON body");
+                    }
+
+                    var productTobeUpdated = objectMapper.readValue(body, ProductDTO.class);
+                    var productTobeUpdatedWithId = new Product(
+                            Long.parseLong(pathParams.get("id")),
+                            productTobeUpdated.title(),
+                            productTobeUpdated.price(),
+                            productTobeUpdated.description(),
+                            productTobeUpdated.quantity(),
+                            productTobeUpdated.category(),
+                            productTobeUpdated.status(),
+                            productTobeUpdated.imageLink()
+                    );
+
+                    var updatedProduct = productService.updateAProduct(productTobeUpdatedWithId);
+
+                    if (updatedProduct == null) {
+                        throw new RuntimeException("Failed to update product.");
+                    }
+
+                    return new HttpResponse(200, "OK",
+                            objectMapper.writeValueAsString(updatedProduct));
+                }
+                default -> {
+                    return new HttpResponse(405, "Method Not Allowed", null);
                 }
             }
         });

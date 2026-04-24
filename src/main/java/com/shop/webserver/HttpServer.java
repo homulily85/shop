@@ -26,6 +26,7 @@ public class HttpServer {
     private HttpResponse dispatch(HttpRequest httpRequest) {
         Map<String, String> pathParams = new HashMap<>();
         RequestHandler handler = matchRoute(httpRequest.path(), pathParams);
+        ObjectMapper mapper = new ObjectMapper();
 
         if (handler != null) {
             byte[] decodedBody = new byte[0];
@@ -33,17 +34,38 @@ public class HttpServer {
                 decodedBody = Base64.getDecoder().decode(httpRequest.body());
             }
 
-            return handler.handle(httpRequest.method(),
-                    httpRequest.query(),
-                    pathParams,
-                    httpRequest.headers(),
-                    decodedBody);
+            try {
+                return handler.handle(httpRequest.method(),
+                        httpRequest.query(),
+                        pathParams,
+                        httpRequest.headers(),
+                        decodedBody);
+
+            } catch (IllegalArgumentException | JsonProcessingException e) {
+                try {
+                    String errorMsg = e.getMessage() != null ? e.getMessage() : "Invalid request " +
+                                                                                "data";
+                    return new HttpResponse(400, "Bad Request",
+                            mapper.writeValueAsString(Map.of("error", errorMsg)));
+                } catch (Exception ex) {
+                    return new HttpResponse(400, "Bad Request", "");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                try {
+                    String errorMsg = e.getMessage() != null ? e.getMessage() : "Internal Server " +
+                                                                                "Error";
+                    return new HttpResponse(500, "Internal Server Error",
+                            mapper.writeValueAsString(Map.of("error", errorMsg)));
+                } catch (Exception ex) {
+                    return new HttpResponse(500, "Internal Server Error", "");
+                }
+            }
         } else {
             try {
-                ObjectMapper mapper = new ObjectMapper();
                 return new HttpResponse(404, "Not Found",
                         mapper.writeValueAsString(Map.of("message", "Route not found.")));
-            } catch (JsonProcessingException e) {
+            } catch (Exception e) {
                 return new HttpResponse(404, "Not Found", "");
             }
         }

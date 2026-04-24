@@ -20,32 +20,18 @@ public class UploadController extends AbstractController {
     @Override
     public void registerRoutes() {
         server.addRoute("/upload", ((method, queryParams, pathParams, headers, body) -> {
-            try {
-                if (!"POST".equalsIgnoreCase(method)) {
-                    return new HttpResponse(405, "Method Not Allowed",
-                            objectMapper.writeValueAsString(Map.of("error", "Only POST is " +
-                                    "supported")));
-                }
-
-                if (body == null || body.length == 0) {
-                    return new HttpResponse(400, "Bad Request",
-                            objectMapper.writeValueAsString(Map.of("error", "Missing file data")));
-                }
-
-                String fileUrl = uploadService.upload(body);
-
-                return new HttpResponse(200, "OK",
-                        objectMapper.writeValueAsString(Map.of("url", fileUrl)));
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                try {
-                    return new HttpResponse(500, "Internal Server Error",
-                            objectMapper.writeValueAsString(Map.of("error", e.getMessage())));
-                } catch (Exception ex) {
-                    return new HttpResponse(500, "Internal Server Error", "");
-                }
+            if (!"POST".equalsIgnoreCase(method)) {
+                return new HttpResponse(405, "Method Not Allowed", null);
             }
+
+            if (body == null || body.length == 0) {
+                throw new IllegalArgumentException("Missing file data");
+            }
+
+            String fileUrl = uploadService.upload(body);
+
+            return new HttpResponse(200, "OK",
+                    objectMapper.writeValueAsString(Map.of("url", fileUrl)));
         }));
     }
 }

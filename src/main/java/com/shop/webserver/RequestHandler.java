@@ -8,5 +8,5 @@ public interface RequestHandler {
                         Map<String, String> queryParams,
                         Map<String, String> pathParams,
                         Map<String, String> headers,
-                        byte[] body);
+                        byte[] body) throws Exception;
 }

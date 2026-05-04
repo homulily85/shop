@@ -9,6 +9,9 @@ public abstract class AbstractController {
         this.server = server;
     }
 
+    /**
+     * Registers the routes for this controller with the HTTP server.
+     */
     public abstract void registerRoutes();
 }
 

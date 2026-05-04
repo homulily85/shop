@@ -41,10 +41,20 @@ public class OrderRepository {
     private OrderRepository() {
     }
 
+    /**
+     * Provide access to the singleton instance of OrderRepository.
+     * @return Singleton instance of OrderRepository.
+     */
     public static OrderRepository getInstance() {
         return Holder.INSTANCE;
     }
 
+    /**
+     * Get an order by its ID.
+     *
+     * @param id Order ID.
+     * @return Order with the given ID, or null if not found.
+     */
     public Order getOrderById(long id) {
         String sql = "SELECT " +
                 ORDER_ALIAS + "." + ORDER_ID + " AS " + ORDER_ID_ALIAS + ", " +
@@ -107,6 +117,13 @@ public class OrderRepository {
             return null;
         }
     }
+
+    /**
+     * Execute a checkout transaction that updates product quantities, creates an order, and inserts order items.
+     *
+     * @param order Order details to be created.
+     * @param items List of order items to be associated with the order.
+     */
 
     public void executeCheckoutTransaction(OrderDTO order, List<OrderItem> items) {
         String sqlUpdateProductAvailableQuantity = ("UPDATE %s SET %s = %s - ? WHERE %s = ? AND " +

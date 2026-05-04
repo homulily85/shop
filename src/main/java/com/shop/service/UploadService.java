@@ -8,10 +8,19 @@ public class UploadService {
     private UploadService() {
     }
 
+    /**
+     * Provides access to the singleton instance of UploadService.
+     * @return Singleton instance of UploadService.
+     */
     public static UploadService getInstance() {
         return Holder.INSTANCE;
     }
 
+    /**
+     * Upload a file to MinIO and return the URL of the uploaded file.
+     * @param fileData Byte array representing the file data to be uploaded.
+     * @return URL of the uploaded file in MinIO.
+     */
     public String upload(byte[] fileData) {
         return minioClient.upload(fileData);
     }

@@ -23,7 +23,6 @@ create table orders
     updated_at   timestamp default current_timestamp() null on update current_timestamp()
 );
 
--- auto-generated definition
 create table order_items
 (
     id               bigint auto_increment

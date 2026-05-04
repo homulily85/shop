@@ -8,6 +8,9 @@ import io.minio.errors.MinioException;
 
 import java.io.ByteArrayInputStream;
 
+/**
+ * Wrapper for MinIO client that handles bucket creation and file uploads.
+ */
 public class Client {
     private static final String bucketName = System.getenv("MINIO_BUCKET_NAME");
     private static final String minioEndpoint = System.getenv("MINIO_ENDPOINT");
@@ -17,6 +20,10 @@ public class Client {
         this.minioClient = create();
     }
 
+    /**
+     * Initializes the MinIO client and ensures the bucket exists. If the bucket does not exist, it will be created.
+     * @return Initialized MinIO client ready for use.
+     */
     private static MinioClient create() {
         MinioClient minioClient = MinioClient.builder()
                 .endpoint(minioEndpoint)
@@ -43,10 +50,19 @@ public class Client {
         return minioClient;
     }
 
+    /**
+     * Provides access to the singleton MinIO client instance.
+     * @return Singleton instance of the MinIO client.
+     */
     public static Client getMinioClient() {
         return ClientHolder.HOLDER;
     }
 
+    /**
+     * Uploads a file to the MinIO bucket.
+     * @param fileData Byte array representing the file data to be uploaded.
+     * @return URL of the uploaded file in the format: {minioEndpoint}/{bucketName}/{objectName}
+     */
     public String upload(byte[] fileData) {
         String objectName = "upload_" + System.currentTimeMillis();
 

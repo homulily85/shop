@@ -4,11 +4,18 @@ import redis.clients.jedis.ConnectionPoolConfig;
 import redis.clients.jedis.DefaultJedisClientConfig;
 import redis.clients.jedis.RedisClient;
 
+/**
+ * Wrapper for RedisClient.
+ */
 public class Client {
     private Client() {
 
     }
 
+    /**
+     * Initializes the Redis client.
+     * @return Initialized Redis client ready for use.
+     */
     private static RedisClient create() {
         ConnectionPoolConfig connectPoolConfig = new ConnectionPoolConfig();
         connectPoolConfig.setMaxTotal(128);
@@ -27,6 +34,10 @@ public class Client {
                 .build();
     }
 
+    /**
+     * Provides access to the singleton Redis client instance.
+     * @return Singleton instance of the Redis client.
+     */
     public static RedisClient getRedisClient() {
         return ClientHolder.HOLDER;
     }

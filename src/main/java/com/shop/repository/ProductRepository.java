@@ -33,6 +33,10 @@ public class ProductRepository {
     private ProductRepository() {
     }
 
+    /**
+     * Provides access to the singleton instance of ProductRepository.
+     * @return Singleton instance of ProductRepository.
+     */
     public static ProductRepository getInstance() {
         return Holder.INSTANCE;
     }

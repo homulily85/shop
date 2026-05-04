@@ -142,7 +142,7 @@ public class ShopApiIntegrationTest {
     public void testCartOperations() throws IOException {
         ObjectNode cartItemDto = mapper.createObjectNode();
         cartItemDto.put("productId", createdProductId);
-        cartItemDto.put("availableQuantity", 2);
+        cartItemDto.put("quantity", 2);
 
         RequestBody postBody = RequestBody.create(cartItemDto.toString(), JSON);
         Request postReq = new Request.Builder()
@@ -378,7 +378,7 @@ public class ShopApiIntegrationTest {
                         .url(BASE_URL + "/products/" + id)
                         .delete()
                         .build();
-                try (Response response = client.newCall(deleteReq).execute()) {
+                try (Response ignored = client.newCall(deleteReq).execute()) {
                 }
             }
         }

@@ -68,29 +68,50 @@ public class ProductController extends AbstractController {
                     productService.deleteAProduct(Long.parseLong(pathParams.get("id")));
                     return new HttpResponse(200, "OK", null);
                 }
-                case "PUT" -> {
+                case "PATCH" -> {
                     if (body == null || body.length == 0) {
                         throw new IllegalArgumentException("Missing JSON body");
                     }
 
-                    var productTobeUpdated = objectMapper.readValue(body, ProductDTO.class);
+                    var existingProduct = productService.getProductById(pathParams.get("id"));
+                    if (existingProduct == null) {
+                        return new HttpResponse(404, "Not Found",
+                                objectMapper.writeValueAsString(Map.of("message", "Product not " +
+                                        "found.")));
+                    }
+
+                    var jsonNode = objectMapper.readTree(body);
+
+                    String updatedTitle = jsonNode.has("title") ? jsonNode.get("title").asText()
+                            : existingProduct.title();
+                    long updatedPrice = jsonNode.has("price") ? jsonNode.get("price").asLong() :
+                            existingProduct.price();
+                    String updatedDescription = jsonNode.has("description") ? jsonNode.get(
+                            "description").asText() : existingProduct.description();
+                    long updatedQuantity = jsonNode.has("availableQuantity") ? jsonNode.get(
+                            "availableQuantity").asLong() : existingProduct.availableQuantity();
+                    String updatedCategory = jsonNode.has("category") ?
+                            jsonNode.get("category").asText() : existingProduct.category();
+                    String updatedStatus = jsonNode.has("status") ?
+                            jsonNode.get("status").asText() : existingProduct.status();
+                    String updatedImageLink = jsonNode.has("imageLink") ? jsonNode.get("imageLink"
+                    ).asText() : existingProduct.imageLink();
+
                     var productTobeUpdatedWithId = new Product(
-                            Long.parseLong(pathParams.get("id")),
-                            productTobeUpdated.title(),
-                            productTobeUpdated.price(),
-                            productTobeUpdated.description(),
-                            productTobeUpdated.availableQuantity(),
-                            productTobeUpdated.category(),
-                            productTobeUpdated.status(),
-                            productTobeUpdated.imageLink()
+                            existingProduct.id(),
+                            updatedTitle,
+                            updatedPrice,
+                            updatedDescription,
+                            updatedQuantity,
+                            updatedCategory,
+                            updatedStatus,
+                            updatedImageLink
                     );
 
                     var updatedProduct = productService.updateAProduct(productTobeUpdatedWithId);
-
                     if (updatedProduct == null) {
                         throw new RuntimeException("Failed to update product.");
                     }
-
                     return new HttpResponse(200, "OK",
                             objectMapper.writeValueAsString(updatedProduct));
                 }

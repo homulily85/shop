@@ -146,6 +146,13 @@ public class CartRepository {
         return -1;
     }
 
+    /**
+     * Create a new active cart for a given customer ID.
+     *
+     * @param customerId ID of the customer for whom the new active cart is to be created.
+     * @return ID of the newly created active cart for the specified customer. If creation fails,
+     * returns -1.
+     */
     public long createNewActiveCartForCustomer(long customerId) {
         String sql =
                 "INSERT INTO " + CART_TABLE_NAME + " (" + CART_CUSTOMER_ID + ", " + CART_STATUS + ") VALUES (?, 'ACTIVE')";
@@ -197,6 +204,13 @@ public class CartRepository {
         return -1;
     }
 
+    /**
+     * Add an item to the active cart for a given customer ID.
+     *
+     * @param activeCartId ID of the active cart to which the item is to be added.
+     * @param productId    ID of the product to be added to the cart.
+     * @param quantity     Quantity of the product to be added to the cart.
+     */
     public void addItemToCart(long activeCartId, long productId, long quantity) {
         String sql = "INSERT INTO " + ITEM_TABLE_NAME + " (" + ITEM_CART_ID + ", " +
                 ITEM_PRODUCT_ID + ", " + ITEM_QUANTITY + ") VALUES (?, ?, ?)";
@@ -214,7 +228,17 @@ public class CartRepository {
         }
     }
 
-    public void updateCartItem(long activeCartId, long productId, long quantity) {
+    /**
+     * Update the quantity of an item in a cart
+     *
+     * @param cartId    ID of the cart in which the item is to be updated
+     * @param productId ID of the product whose quantity is to be updated
+     * @param quantity  New quantity of the product in the cart
+     */
+    public void updateCartItem(long cartId, long productId, long quantity) {
+        if (quantity < 0) {
+            throw new IllegalArgumentException("Quantity cannot be negative");
+        }
         String sql = "UPDATE " + ITEM_TABLE_NAME + " SET " + ITEM_QUANTITY + " = ? " +
                 "WHERE " + ITEM_CART_ID + " = ? AND " + ITEM_PRODUCT_ID + " = ?";
 
@@ -222,7 +246,7 @@ public class CartRepository {
              PreparedStatement stmt = connection.prepareStatement(sql)) {
 
             stmt.setLong(1, quantity);
-            stmt.setLong(2, activeCartId);
+            stmt.setLong(2, cartId);
             stmt.setLong(3, productId);
             stmt.executeUpdate();
 
@@ -231,6 +255,12 @@ public class CartRepository {
         }
     }
 
+    /**
+     * Remove an item from the cart
+     *
+     * @param cartId    ID of the cart from which the item is to be removed
+     * @param productId ID of the product to be removed from the cart
+     */
     public void removeItemFromCart(long cartId, long productId) {
         String sql = "DELETE FROM " + ITEM_TABLE_NAME +
                 " WHERE " + ITEM_CART_ID + " = ? AND " + ITEM_PRODUCT_ID + " = ?";
@@ -247,6 +277,11 @@ public class CartRepository {
         }
     }
 
+    /**
+     * Make a cart inactive
+     *
+     * @param cartId ID of the cart to be made inactive
+     */
     public void makeACartInactive(long cartId) {
         String sql = "UPDATE " + CART_TABLE_NAME + " SET " + CART_STATUS + " = 'INACTIVE' " +
                 "WHERE " + CART_ID + " = ?";

@@ -45,6 +45,37 @@ create index order_id
 create index product_id
     on order_items (product_id);
 
+create table carts
+(
+    id          bigint auto_increment
+        primary key,
+    customer_id int                                  not null,
+    status      varchar(30)                          not null,
+    created_at  datetime default current_timestamp() null,
+    updated_at  datetime default current_timestamp() null
+);
+
+create table cart_items
+(
+    id         bigint auto_increment
+        primary key,
+    cart_id    bigint null,
+    product_id bigint null,
+    quantity   int    not null,
+    created_at  datetime default current_timestamp() null,
+    updated_at  datetime default current_timestamp() null,
+    constraint `1`
+        foreign key (cart_id) references carts (id),
+    constraint `2`
+        foreign key (product_id) references products (id)
+);
+
+create index cart_id
+    on cart_items (cart_id);
+
+create index product_id
+    on cart_items (product_id);
+
 INSERT INTO shop.products (id, title, price, description, available_quantity, category, status, image_link, created_at,
                            updated_at)
 VALUES (1, 'Sony WH-1000XM5 Wireless Headphones', 34800,

@@ -19,6 +19,7 @@ public class OrderRepository {
     private static final String ORDER_ID = "id";
     private static final String ORDER_CUSTOMER_ID = "customer_id";
     private static final String ORDER_TOTAL_AMOUNT = "total_amount";
+    private static final String ORDER_STATUS = "status";
     private static final String ORDER_ID_ALIAS = "order_id";
 
     private static final String ITEM_TABLE_NAME = "order_items";
@@ -43,6 +44,7 @@ public class OrderRepository {
 
     /**
      * Provide access to the singleton instance of OrderRepository.
+     *
      * @return Singleton instance of OrderRepository.
      */
     public static OrderRepository getInstance() {
@@ -60,6 +62,7 @@ public class OrderRepository {
                 ORDER_ALIAS + "." + ORDER_ID + " AS " + ORDER_ID_ALIAS + ", " +
                 ORDER_ALIAS + "." + ORDER_CUSTOMER_ID + ", " +
                 ORDER_ALIAS + "." + ORDER_TOTAL_AMOUNT + ", " +
+                ORDER_ALIAS + "." + ORDER_STATUS + ", " +
                 ITEM_ALIAS + "." + ITEM_PRODUCT_ID + ", " +
                 ITEM_ALIAS + "." + ITEM_QUANTITY + ", " +
                 PRODUCT_ALIAS + "." + PRODUCT_TITLE + ", " +
@@ -90,8 +93,9 @@ public class OrderRepository {
                         long orderId = rs.getLong(ORDER_ID_ALIAS);
                         long customerId = rs.getLong(ORDER_CUSTOMER_ID);
                         long totalAmount = rs.getLong(ORDER_TOTAL_AMOUNT);
+                        String status = rs.getString(ORDER_STATUS);
 
-                        order = new Order(orderId, customerId, totalAmount, items);
+                        order = new Order(orderId, customerId, totalAmount, status, items);
                     }
 
                     long productId = rs.getLong(ITEM_PRODUCT_ID);
@@ -119,7 +123,8 @@ public class OrderRepository {
     }
 
     /**
-     * Execute a checkout transaction that updates product quantities, creates an order, and inserts order items.
+     * Execute a checkout transaction that updates product quantities, creates an order, and
+     * inserts order items.
      *
      * @param order Order details to be created.
      * @param items List of order items to be associated with the order.

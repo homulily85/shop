@@ -17,10 +17,11 @@ create table orders
 (
     id           bigint auto_increment
         primary key,
-    customer_id  bigint                                not null,
-    total_amount bigint                                not null,
-    created_at   timestamp default current_timestamp() null,
-    updated_at   timestamp default current_timestamp() null on update current_timestamp()
+    customer_id  bigint                                   not null,
+    total_amount bigint                                   not null,
+    status       varchar(255) default 'pending'           null,
+    created_at   timestamp    default current_timestamp() null,
+    updated_at   timestamp    default current_timestamp() null on update current_timestamp()
 );
 
 create table order_items

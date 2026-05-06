@@ -29,12 +29,44 @@ public class ProductController extends AbstractController {
                     return new HttpResponse(200, "OK", objectMapper.writeValueAsString(products));
                 }
 
-                int pageNumber = Integer.parseInt(queryParams.getOrDefault("pageNumber", "0"));
-                int pageSize = Integer.parseInt(queryParams.getOrDefault("pageSize", "10"));
+                int pageNumber = 0;
+                int pageSize = 10;
+
+                try {
+                    pageNumber = Integer.parseInt(queryParams.getOrDefault("pageNumber", "0"));
+                } catch (NumberFormatException ignored) {
+                }
+
+                try {
+                    pageSize = Integer.parseInt(queryParams.getOrDefault("pageSize", "10"));
+                } catch (NumberFormatException ignored) {
+                }
+
+                if (pageNumber < 0) {
+                    pageNumber = 0;
+                }
+                if (pageSize <= 0) {
+                    pageSize = 10;
+                }
 
                 var products = productService.getAllProducts(pageNumber, pageSize);
-                return new HttpResponse(200, "OK", objectMapper.writeValueAsString(products));
 
+                long totalItems = productService.getTotalProductCount();
+                int totalPages = (int) Math.ceil((double) totalItems / pageSize);
+                int pagesLeft = Math.max(0, totalPages - (pageNumber + 1));
+
+                var responseBody = Map.of(
+                        "data", products,
+                        "pagination", Map.of(
+                                "pageNumber", pageNumber,
+                                "pageSize", pageSize,
+                                "totalItems", totalItems,
+                                "totalPages", totalPages,
+                                "pagesLeft", pagesLeft
+                        )
+                );
+
+                return new HttpResponse(200, "OK", objectMapper.writeValueAsString(responseBody));
             } else if (method.equals("POST")) {
                 if (body == null || body.length == 0) {
                     throw new IllegalArgumentException("Missing JSON body");

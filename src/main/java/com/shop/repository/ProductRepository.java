@@ -35,10 +35,30 @@ public class ProductRepository {
 
     /**
      * Provides access to the singleton instance of ProductRepository.
+     *
      * @return Singleton instance of ProductRepository.
      */
     public static ProductRepository getInstance() {
         return Holder.INSTANCE;
+    }
+
+    /**
+     * Get the total count of products in the database.
+     *
+     * @return Total number of products.
+     */
+    public long getTotalProductCount() {
+        String sql = "SELECT COUNT(*) FROM %s".formatted(TABLE_NAME);
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement query = connection.prepareStatement(sql);
+             ResultSet resultSet = query.executeQuery()) {
+            if (resultSet.next()) {
+                return resultSet.getLong(1);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
     }
 
     /**
@@ -98,7 +118,8 @@ public class ProductRepository {
                 if (generatedKeys.next()) {
                     long id = generatedKeys.getLong(ID_INDEX);
                     return new Product(id, productDTO.title(), productDTO.price(),
-                            productDTO.description(), productDTO.availableQuantity(), productDTO.category(),
+                            productDTO.description(), productDTO.availableQuantity(),
+                            productDTO.category(),
                             productDTO.status(), productDTO.imageLink());
                 } else {
                     throw new SQLException("Creating product failed, no ID obtained.");

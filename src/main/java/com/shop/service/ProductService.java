@@ -31,6 +31,15 @@ public class ProductService {
     }
 
     /**
+     * Get the total number of products.
+     *
+     * @return Total product count.
+     */
+    public long getTotalProductCount() {
+        return productRepository.getTotalProductCount();
+    }
+
+    /**
      * Get paginated products from the database.
      *
      * @return List of products.

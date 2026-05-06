@@ -1,5 +1,6 @@
 package com.shop.service;
 
+import com.shop.client.payment.PaymentApiClient;
 import com.shop.dto.OrderDTO;
 import com.shop.model.Order;
 import com.shop.repository.OrderRepository;
@@ -7,6 +8,7 @@ import com.shop.repository.OrderRepository;
 public class OrderService {
     private final OrderRepository orderRepository = OrderRepository.getInstance();
     private final CartService cartService = CartService.getInstance();
+    private final PaymentApiClient paymentApiClient = PaymentApiClient.getInstance();
 
     private OrderService() {
     }
@@ -47,9 +49,19 @@ public class OrderService {
                 cart.items().stream().mapToLong(item -> item.product().price() * item.orderedQuantity())
                         .sum();
 
-        return orderRepository.createPendingOrderTransaction(new OrderDTO(Long.parseLong(customerId), totalAmount, cart.items()));
+        var newOderId =
+                orderRepository.createPendingOrderTransaction(new OrderDTO(Long.parseLong(customerId), totalAmount, cart.items()));
 
+        var transactionId = paymentApiClient.makePayment(newOderId, Long.parseLong(customerId),
+                totalAmount);
 
+        if (transactionId < 0) {
+            orderRepository.markOrderFailedAndRestoreStock(newOderId, cart.items());
+            throw new RuntimeException("Payment service unavailable. Your order was cancelled and" +
+                    " you were not charged.");
+        }
+
+        return transactionId;
     }
 
     private static class Holder {

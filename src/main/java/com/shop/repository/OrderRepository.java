@@ -20,6 +20,7 @@ public class OrderRepository {
     private static final String ORDER_CUSTOMER_ID = "customer_id";
     private static final String ORDER_TOTAL_AMOUNT = "total_amount";
     private static final String ORDER_STATUS = "status";
+    private static final String ORDER_BILL_ID = "bill_id";
     private static final String ORDER_ID_ALIAS = "order_id";
 
     private static final String ITEM_TABLE_NAME = "order_items";
@@ -94,8 +95,9 @@ public class OrderRepository {
                         long customerId = rs.getLong(ORDER_CUSTOMER_ID);
                         long totalAmount = rs.getLong(ORDER_TOTAL_AMOUNT);
                         String status = rs.getString(ORDER_STATUS);
+                        Long billId = rs.getLong(ORDER_BILL_ID);
 
-                        order = new Order(orderId, customerId, totalAmount, status, items);
+                        order = new Order(orderId, customerId, totalAmount, status,billId,items);
                     }
 
                     long productId = rs.getLong(ITEM_PRODUCT_ID);
@@ -278,6 +280,47 @@ public class OrderRepository {
                 stmt.addBatch();
             }
             stmt.executeBatch();
+        }
+    }
+
+    /**
+     * Compensating transaction to run if the 3rd-party payment initiation fails.
+     * Marks the order as FAILED and restores product inventory.
+     */
+    public void markOrderFailedAndRestoreStock(long orderId, List<OrderItem> items) {
+        String sqlUpdateOrder = "UPDATE %s SET %s = ? WHERE %s = ?".formatted(
+                ORDER_TABLE_NAME, ORDER_STATUS, ORDER_ID);
+
+        String sqlRestoreStock = "UPDATE %s SET %s = %s + ? WHERE %s = ?".formatted(
+                PRODUCT_TABLE_NAME, PRODUCT_QUANTITY, PRODUCT_QUANTITY, PRODUCT_ID);
+
+        try (Connection connection = DatabaseManager.getConnection()) {
+            connection.setAutoCommit(false);
+
+            try (PreparedStatement stmtUpdateOrder = connection.prepareStatement(sqlUpdateOrder);
+                 PreparedStatement stmtRestoreStock = connection.prepareStatement(sqlRestoreStock)) {
+
+                // 1. Mark order as FAILED
+                stmtUpdateOrder.setString(1, "FAILED");
+                stmtUpdateOrder.setLong(2, orderId);
+                stmtUpdateOrder.executeUpdate();
+
+                for (OrderItem item : items) {
+                    stmtRestoreStock.setLong(1, item.orderedQuantity());
+                    stmtRestoreStock.setLong(2, item.product().id());
+                    stmtRestoreStock.addBatch();
+                }
+                stmtRestoreStock.executeBatch();
+
+                connection.commit();
+
+            } catch (Exception e) {
+                connection.rollback();
+                throw new RuntimeException("CRITICAL: Failed to execute compensating transaction for order " + orderId, e);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 

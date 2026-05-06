@@ -22,6 +22,9 @@ public class CartController extends AbstractController {
             switch (method) {
                 case "GET" -> {
                     var cartItems = cartService.getCartItems(pathParams.get("id"));
+                    if (cartItems == null) {
+                        return new HttpResponse(200, "OK", null);
+                    }
                     return new HttpResponse(200, "OK", objectMapper.writeValueAsString(cartItems));
                 }
 
@@ -30,7 +33,7 @@ public class CartController extends AbstractController {
                         throw new IllegalArgumentException("Missing JSON body");
                     }
                     CartItemDTO cartItemDTO = objectMapper.readValue(body, CartItemDTO.class);
-                    cartService.addToCart(pathParams.get("id"), cartItemDTO.productId(),
+                    cartService.updateCart(pathParams.get("id"), cartItemDTO.productId(),
                             cartItemDTO.quantity());
 
                     return new HttpResponse(200, "OK", null);

@@ -142,7 +142,7 @@ public class ShopApiIntegrationTest {
     public void testCartOperations() throws IOException {
         ObjectNode cartItemDto = mapper.createObjectNode();
         cartItemDto.put("productId", createdProductId);
-        cartItemDto.put("quantity", 2);
+        cartItemDto.put("quantityInCart", 2);
 
         RequestBody postBody = RequestBody.create(cartItemDto.toString(), JSON);
         Request postReq = new Request.Builder()

@@ -36,18 +36,7 @@ public class OrderService {
      * @throws IllegalStateException if the cart is empty.
      */
     public void checkout(String cartId, long customerId) {
-        var cart = cartService.getCartItems(cartId);
-        if (cart.isEmpty()) {
-            throw new IllegalStateException("Cart is empty");
-        }
-        long totalAmount =
-                cart.stream().mapToLong(item -> item.product().price() * item.orderedQuantity())
-                        .sum();
 
-        var orderDto = new OrderDTO(customerId, totalAmount, cart);
-        orderRepository.executeCheckoutTransaction(orderDto, cart);
-
-        cartService.clearCart(cartId);
     }
 
     private static class Holder {

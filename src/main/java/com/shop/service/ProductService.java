@@ -24,6 +24,7 @@ public class ProductService {
 
     /**
      * Provides access to the singleton instance of ProductService.
+     *
      * @return Singleton instance of ProductService.
      */
     public static ProductService getInstance() {
@@ -43,12 +44,13 @@ public class ProductService {
      * Get paginated and sorted products from the database.
      *
      * @param pageNumber Page index to retrieve.
-     * @param pageSize Number of items per page.
-     * @param sortBy Field to sort by.
-     * @param sortOrder Direction of sort ("asc" or "desc").
+     * @param pageSize   Number of items per page.
+     * @param sortBy     Field to sort by.
+     * @param sortOrder  Direction of sort ("asc" or "desc").
      * @return List of products.
      */
-    public List<Product> getAllProducts(int pageNumber, int pageSize, String sortBy, String sortOrder) {
+    public List<Product> getAllProducts(int pageNumber, int pageSize, String sortBy,
+                                        String sortOrder) {
         return productRepository.getAllProducts(pageNumber, pageSize, sortBy, sortOrder);
     }
 
@@ -56,7 +58,8 @@ public class ProductService {
      * Get popular products.
      *
      * @return List of popular products.
-     * @throws RuntimeException if there is an error processing JSON data for caching popular products in Redis.
+     * @throws RuntimeException if there is an error processing JSON data for caching popular
+     *                          products in Redis.
      */
     private List<Product> getPopularProducts() {
         // Check if popular products are cached in Redis
@@ -80,7 +83,8 @@ public class ProductService {
 
         try {
             for (Product product : popularProducts) {
-                popularProductsMap.put(String.valueOf(product.id()), objectMapper.writeValueAsString(product));
+                popularProductsMap.put(String.valueOf(product.id()),
+                        objectMapper.writeValueAsString(product));
             }
 
             if (!popularProductsMap.isEmpty()) {
@@ -96,7 +100,8 @@ public class ProductService {
     }
 
     /**
-     * Get products by status. If the status is "popular", it will first check the Redis cache before querying the database.
+     * Get products by status. If the status is "popular", it will first check the Redis cache
+     * before querying the database.
      *
      * @param status Product status to filter by.
      * @return List of products with the given status.
@@ -114,75 +119,52 @@ public class ProductService {
      *
      * @param id Product ID as a string. It will be parsed to a long before querying the database.
      * @return Product with the given ID, or null if not found.
-     * @throws RuntimeException if there is an error processing JSON data for caching popular products in Redis.
+     * @throws RuntimeException if there is an error processing JSON data for caching popular
+     *                          products in Redis.
      */
     public Product getProductById(String id) {
-        try {
-            // Check if the product is cached in Redis
-            String cachedProductJson = redisClient.hget(POPULAR_HASH_KEY, id);
-
-            if (cachedProductJson != null) {
-                return objectMapper.readValue(cachedProductJson, Product.class);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
-
         return productRepository.getProductById(Long.parseLong(id));
     }
 
     /**
-     * Create a new product in the database. If the product is created with "popular" status, it will be cached in Redis.
+     * Create a new product in the database. If the product is created with "popular" status, it
+     * will be cached in Redis.
      *
-     * @param productDTO Product data transfer object containing the details of the product to be created.
+     * @param productDTO Product data transfer object containing the details of the product to be
+     *                   created.
      * @return The created product with the generated ID, or null if creation failed.
-     * @throws RuntimeException if there is an error processing JSON data for caching popular products in Redis.
+     * @throws RuntimeException if there is an error processing JSON data for caching popular
+     *                          products in Redis.
      */
     public Product createAProduct(ProductDTO productDTO) {
         var createdProduct = productRepository.createNewProduct(productDTO);
 
-        // Add the newly created product to Redis cache if it has "popular" status and the cache already exists
-        if (createdProduct != null && redisClient.exists(POPULAR_HASH_KEY)) {
-            if ("popular".equalsIgnoreCase(createdProduct.status())) {
-                try {
-                    redisClient.hset(POPULAR_HASH_KEY, String.valueOf(createdProduct.id()), objectMapper.writeValueAsString(createdProduct));
-                } catch (JsonProcessingException e) {
-                    e.printStackTrace();
-                }
-            }
+        if (createdProduct != null) {
+            redisClient.del(POPULAR_HASH_KEY);
         }
 
         return createdProduct;
     }
 
     /**
-     * Update an existing product in the database. If the product's status is updated to "popular", it will be added to the Redis cache.
-     * If the product's status is updated from "popular" to something else, it will be removed from the Redis cache.
+     * Update an existing product in the database. If the product's status is updated to
+     * "popular", it will be added to the Redis cache.
+     * If the product's status is updated from "popular" to something else, it will be removed
+     * from the Redis cache.
      *
-     * @param product Product object containing the updated details of the product. The product must have a valid ID.
+     * @param product Product object containing the updated details of the product. The product
+     *                must have a valid ID.
      * @return The updated product, or null if the update failed.
-     * @throws RuntimeException if there is an error processing JSON data for caching popular products in Redis.
+     * @throws RuntimeException if there is an error processing JSON data for caching popular
+     *                          products in Redis.
      */
     public Product updateAProduct(Product product) {
         boolean updated = productRepository.updateAProduct(product);
-
         if (!updated) {
             return null;
         }
 
-        // Update the Redis cache based on the product's status if the cache already exists
-        if (redisClient.exists(POPULAR_HASH_KEY)) {
-            if ("popular".equalsIgnoreCase(product.status())) {
-                try {
-                    redisClient.hset(POPULAR_HASH_KEY, String.valueOf(product.id()), objectMapper.writeValueAsString(product));
-                } catch (JsonProcessingException e) {
-                    e.printStackTrace();
-                }
-            } else {
-                redisClient.hdel(POPULAR_HASH_KEY, String.valueOf(product.id()));
-            }
-        }
+        redisClient.del(POPULAR_HASH_KEY);
 
         return product;
     }
@@ -191,10 +173,11 @@ public class ProductService {
      * Delete a product from the database.
      *
      * @param productId ID of the product to be deleted.
-      */
+     */
     public void deleteAProduct(long productId) {
         productRepository.deleteAProduct(productId);
-        redisClient.hdel(POPULAR_HASH_KEY, String.valueOf(productId));
+
+        redisClient.del(POPULAR_HASH_KEY);
     }
 
     private static class Holder {

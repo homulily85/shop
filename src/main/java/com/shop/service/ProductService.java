@@ -40,12 +40,16 @@ public class ProductService {
     }
 
     /**
-     * Get paginated products from the database.
+     * Get paginated and sorted products from the database.
      *
+     * @param pageNumber Page index to retrieve.
+     * @param pageSize Number of items per page.
+     * @param sortBy Field to sort by.
+     * @param sortOrder Direction of sort ("asc" or "desc").
      * @return List of products.
      */
-    public List<Product> getAllProducts(int pageNumber, int pageSize) {
-        return productRepository.getAllProducts(pageNumber, pageSize);
+    public List<Product> getAllProducts(int pageNumber, int pageSize, String sortBy, String sortOrder) {
+        return productRepository.getAllProducts(pageNumber, pageSize, sortBy, sortOrder);
     }
 
     /**

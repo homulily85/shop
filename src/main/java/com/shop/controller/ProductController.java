@@ -42,14 +42,14 @@ public class ProductController extends AbstractController {
                 } catch (NumberFormatException ignored) {
                 }
 
-                if (pageNumber < 0) {
-                    pageNumber = 0;
-                }
-                if (pageSize <= 0) {
-                    pageSize = 10;
-                }
+                if (pageNumber < 0) pageNumber = 0;
+                if (pageSize <= 0) pageSize = 10;
 
-                var products = productService.getAllProducts(pageNumber, pageSize);
+                String sortBy = queryParams.getOrDefault("sortBy", "id");
+                String sortOrder = queryParams.getOrDefault("sortOrder", "asc");
+
+                var products = productService.getAllProducts(pageNumber, pageSize, sortBy,
+                        sortOrder);
 
                 long totalItems = productService.getTotalProductCount();
                 int totalPages = (int) Math.ceil((double) totalItems / pageSize);
@@ -63,6 +63,10 @@ public class ProductController extends AbstractController {
                                 "totalItems", totalItems,
                                 "totalPages", totalPages,
                                 "pagesLeft", pagesLeft
+                        ),
+                        "sorting", Map.of(
+                                "sortBy", sortBy,
+                                "sortOrder", sortOrder
                         )
                 );
 

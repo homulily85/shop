@@ -62,12 +62,27 @@ public class ProductRepository {
     }
 
     /**
-     * Get paginated products from the database.
+     * Get paginated and sorted products from the database.
      *
+     * @param pageNumber Page index to retrieve.
+     * @param pageSize Number of items per page.
+     * @param sortBy Field to sort by.
+     * @param sortOrder Direction of sort ("asc" or "desc").
      * @return List of products.
      */
-    public List<Product> getAllProducts(int pageNumber, int pageSize) {
-        String sql = "SELECT * FROM %s LIMIT ? OFFSET ?".formatted(TABLE_NAME);
+    public List<Product> getAllProducts(int pageNumber, int pageSize, String sortBy, String sortOrder) {
+        String column = switch (sortBy != null ? sortBy : "") {
+            case "title" -> TITLE;
+            case "price" -> PRICE;
+            case "availableQuantity" -> QUANTITY;
+            case "category" -> CATEGORY;
+            case "status" -> STATUS;
+            default -> ID;
+        };
+
+        String direction = "desc".equalsIgnoreCase(sortOrder) ? "DESC" : "ASC";
+
+        String sql = "SELECT * FROM %s ORDER BY %s %s LIMIT ? OFFSET ?".formatted(TABLE_NAME, column, direction);
         return executeProductQuery(sql, pageSize, pageNumber * pageSize);
     }
 

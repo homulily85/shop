@@ -4,4 +4,4 @@ COPY . /usr/src/myapp
 
 WORKDIR /usr/src/myapp
 
-CMD ["php", "-S", "0.0.0.0:8081", "-t", "/usr/src/myapp"]
+CMD ["php", "-S", "0.0.0.0:${PORT}", "-t", "/usr/src/myapp"]

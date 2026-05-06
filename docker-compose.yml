@@ -29,6 +29,7 @@ services:
       dockerfile: Dockerfile
     container_name: shop-php-gateway
     environment:
+      - PORT=8081
       - JAVA_HOST=shop
       - JAVA_PORT=12345
     ports:

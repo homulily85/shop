@@ -1,7 +1,3 @@
-FROM php:8.2-cli
-
+FROM php:8.2-fpm
 COPY . /usr/src/myapp
-
 WORKDIR /usr/src/myapp
-
-CMD ["php", "-S", "0.0.0.0:${PORT}", "-t", "/usr/src/myapp"]

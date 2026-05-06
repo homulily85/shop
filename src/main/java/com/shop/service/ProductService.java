@@ -89,7 +89,7 @@ public class ProductService {
 
             if (!popularProductsMap.isEmpty()) {
                 redisClient.hset(POPULAR_HASH_KEY, popularProductsMap);
-                redisClient.expire(POPULAR_HASH_KEY, 3600);
+                redisClient.expire(POPULAR_HASH_KEY, 300);
             }
 
             return popularProducts;

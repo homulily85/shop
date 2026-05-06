@@ -2,7 +2,7 @@ package com.shop.repository;
 
 import com.shop.database.DatabaseManager;
 import com.shop.model.Cart;
-import com.shop.model.CartItem;
+import com.shop.model.OrderItem;
 import com.shop.model.Product;
 
 import java.sql.Connection;
@@ -19,6 +19,7 @@ public class CartRepository {
     private static final String CART_CUSTOMER_ID = "customer_id";
     private static final String CART_STATUS = "status";
     private static final String CART_ID_ALIAS = "cart_id";
+    private static final String CART_STATUS_ALIAS = "cart_status";
 
     private static final String ITEM_TABLE_NAME = "cart_items";
     private static final String ITEM_ALIAS = "i";
@@ -56,6 +57,7 @@ public class CartRepository {
         String sql = "SELECT " +
                 CART_ALIAS + "." + CART_ID + " AS " + CART_ID_ALIAS + ", " +
                 CART_ALIAS + "." + CART_CUSTOMER_ID + ", " +
+                CART_ALIAS + "." + CART_STATUS + " AS " + CART_STATUS_ALIAS + ", " +
                 ITEM_ALIAS + "." + ITEM_PRODUCT_ID + ", " +
                 ITEM_ALIAS + "." + ITEM_QUANTITY + ", " +
                 PRODUCT_ALIAS + "." + PRODUCT_TITLE + ", " +
@@ -81,13 +83,13 @@ public class CartRepository {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 Cart cart = null;
-                List<CartItem> items = new ArrayList<>();
+                List<OrderItem> items = new ArrayList<>();
 
                 while (rs.next()) {
                     if (cart == null) {
                         long cartId = rs.getLong(CART_ID_ALIAS);
                         long returnedCustomerId = rs.getLong(CART_CUSTOMER_ID);
-                        String status = rs.getString(CART_STATUS);
+                        String status = rs.getString(CART_STATUS_ALIAS);
 
                         cart = new Cart(cartId, returnedCustomerId, status, items);
                     }
@@ -102,7 +104,7 @@ public class CartRepository {
                     String productImageLink = rs.getString(PRODUCT_IMAGE_LINK);
 
                     int quantity = rs.getInt(ITEM_QUANTITY);
-                    items.add(new CartItem(new Product(productId, productTitle, productPrice,
+                    items.add(new OrderItem(new Product(productId, productTitle, productPrice,
                             productDescription, productQuantity,
                             productCategory, productStatus, productImageLink)
                             , quantity));

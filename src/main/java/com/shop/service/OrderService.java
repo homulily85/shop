@@ -1,10 +1,12 @@
 package com.shop.service;
 
+import com.shop.dto.OrderDTO;
 import com.shop.model.Order;
 import com.shop.repository.OrderRepository;
 
 public class OrderService {
     private final OrderRepository orderRepository = OrderRepository.getInstance();
+    private final CartService cartService = CartService.getInstance();
 
     private OrderService() {
     }
@@ -32,11 +34,21 @@ public class OrderService {
     /**
      * Checkout the cart for the given cart ID and customer ID.
      *
-     * @param cartId     ID of the cart to check out.
      * @param customerId ID of the customer placing the order.
      * @throws IllegalStateException if the cart is empty.
      */
-    public void checkout(String cartId, long customerId) {
+    public long checkout(String customerId) {
+        var cart = cartService.getCart(customerId);
+        if (cart == null || cart.items().isEmpty()) {
+            throw new IllegalArgumentException("Cart is empty!");
+        }
+
+        long totalAmount =
+                cart.items().stream().mapToLong(item -> item.product().price() * item.orderedQuantity())
+                        .sum();
+
+        return orderRepository.createPendingOrderTransaction(new OrderDTO(Long.parseLong(customerId), totalAmount, cart.items()));
+
 
     }
 

@@ -21,7 +21,7 @@ public class CartController extends AbstractController {
         server.addRoute("/cart/:id", (method, queryParams, pathParams, headers, body) -> {
             switch (method) {
                 case "GET" -> {
-                    var cartItems = cartService.getCartItems(pathParams.get("id"));
+                    var cartItems = cartService.getCart(pathParams.get("id"));
                     if (cartItems == null) {
                         return new HttpResponse(200, "OK", null);
                     }

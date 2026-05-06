@@ -200,6 +200,87 @@ public class OrderRepository {
         }
     }
 
+    public long createPendingOrderTransaction(OrderDTO order) {
+        try (Connection connection = DatabaseManager.getConnection()) {
+
+            connection.setAutoCommit(false);
+
+            try {
+                deductProductStock(connection, order.items());
+                long orderId = insertPendingOrder(connection, order);
+                insertOrderItems(connection, orderId, order.items());
+
+                connection.commit();
+                return orderId;
+
+            } catch (Exception e) {
+                connection.rollback();
+                throw new RuntimeException("Checkout transaction failed: " + e.getMessage(), e);
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Database connection error", e);
+        }
+    }
+
+    private void deductProductStock(Connection connection, List<OrderItem> items) throws SQLException {
+        String sql =
+                "UPDATE " + PRODUCT_TABLE_NAME +
+                        " SET " + PRODUCT_QUANTITY + " = " + PRODUCT_QUANTITY + " - ?" +
+                        " WHERE " + PRODUCT_ID + " = ? AND " + PRODUCT_QUANTITY + " >= ?";
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            for (OrderItem item : items) {
+                stmt.setLong(1, item.orderedQuantity());
+                stmt.setLong(2, item.product().id());
+                stmt.setLong(3, item.orderedQuantity());
+
+                int affectedRows = stmt.executeUpdate();
+                if (affectedRows == 0) {
+                    throw new RuntimeException("Insufficient stock for product ID: " + item.product().id());
+                }
+            }
+        }
+    }
+
+    private long insertPendingOrder(Connection connection, OrderDTO order) throws SQLException {
+        String sql = "INSERT INTO " + ORDER_TABLE_NAME +
+                " ( " + ORDER_CUSTOMER_ID + ", " + ORDER_TOTAL_AMOUNT + ", " + ORDER_STATUS + " )" +
+                " VALUES (?, ?, ?)";
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql,
+                PreparedStatement.RETURN_GENERATED_KEYS)) {
+            stmt.setLong(1, order.customerId());
+            stmt.setLong(2, order.totalAmount());
+            stmt.setString(3, "PENDING");
+            stmt.executeUpdate();
+
+            try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    return generatedKeys.getLong(1);
+                } else {
+                    throw new SQLException("Failed to retrieve generated order ID.");
+                }
+            }
+        }
+    }
+
+    private void insertOrderItems(Connection connection, long orderId, List<OrderItem> items) throws SQLException {
+        String sql =
+                "INSERT INTO %s (%s, %s, %s) VALUES (?, ?, ?)".formatted(ITEM_TABLE_NAME,
+                        ORDER_ID_ALIAS, ITEM_PRODUCT_ID, ITEM_QUANTITY);
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            for (OrderItem item : items) {
+                stmt.setLong(1, orderId);
+                stmt.setLong(2, item.product().id());
+                stmt.setLong(3, item.orderedQuantity());
+                stmt.addBatch();
+            }
+            stmt.executeBatch();
+        }
+    }
+
     private static class Holder {
         private static final OrderRepository INSTANCE = new OrderRepository();
     }

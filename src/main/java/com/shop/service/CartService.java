@@ -28,7 +28,7 @@ public class CartService {
      * If the customer has no active cart or if the cart is empty, an empty list will be returned.
      * @throws NumberFormatException if the provided customer ID string cannot be parsed to a long.
      */
-    public Cart getCartItems(String customerId) {
+    public Cart getCart(String customerId) {
         return cartRepository.getCartItemsInActiveCartOfCustomer(Long.parseLong(customerId));
 
     }

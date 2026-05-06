@@ -44,4 +44,30 @@ create index order_id
 create index product_id
     on order_items (product_id);
 
+INSERT INTO shop.products (id, title, price, description, available_quantity, category, status, image_link, created_at,
+                           updated_at)
+VALUES (1, 'Sony WH-1000XM5 Wireless Headphones', 34800,
+        'Industry-leading noise canceling headphones with exceptional sound quality.', 45, 'Electronics', 'POPULAR',
+        'https://example.com/images/sony-wh1000xm5.jpg', '2026-05-06 03:44:29', '2026-05-06 03:44:50');
+INSERT INTO shop.products (id, title, price, description, available_quantity, category, status, image_link, created_at,
+                           updated_at)
+VALUES (2, 'Men\'s Classic Cotton Crewneck T-Shirt', 1999, '100% organic cotton everyday basic t-shirt in navy blue.',
+        120, 'Apparel', 'POPULAR', 'https://example.com/images/mens-navy-tee.jpg', '2026-05-06 03:44:29',
+        '2026-05-06 03:44:50');
+INSERT INTO shop.products (id, title, price, description, available_quantity, category, status, image_link, created_at,
+                           updated_at)
+VALUES (3, 'Bonavita Connoisseur 8-Cup Coffee Maker', 18999,
+        'One-touch pour-over style coffee maker with thermal carafe.', 0, 'Home & Kitchen', 'OUT_OF_STOCK',
+        'https://example.com/images/bonavita-coffee.jpg', '2026-05-06 03:44:29', '2026-05-06 03:44:29');
+INSERT INTO shop.products (id, title, price, description, available_quantity, category, status, image_link, created_at,
+                           updated_at)
+VALUES (4, 'The Pragmatic Programmer: 20th Anniversary', 3995,
+        'A definitive guide to software development and best practices.', 12, 'Books', 'POPULAR',
+        'https://example.com/images/pragmatic-programmer.jpg', '2026-05-06 03:44:29', '2026-05-06 03:44:50');
+INSERT INTO shop.products (id, title, price, description, available_quantity, category, status, image_link, created_at,
+                           updated_at)
+VALUES (5, 'Minimalist Leather Bifold Wallet', 4500, null, 85, 'Accessories', 'POPULAR', null, '2026-05-06 03:44:29',
+        '2026-05-06 03:44:50');
+
+
 

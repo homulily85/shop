@@ -78,10 +78,12 @@ public class HttpServer {
     }
 
     /**
-     * Matches the incoming request path against registered routes, including support for dynamic path parameters.
+     * Matches the incoming request path against registered routes, including support for dynamic
+     * path parameters.
      *
      * @param requestPath The path of the incoming HTTP request.
-     * @param pathParams  A map to store any extracted path parameters if a dynamic route is matched.
+     * @param pathParams  A map to store any extracted path parameters if a dynamic route is
+     *                    matched.
      * @return The RequestHandler associated with the matched route, or null if no match is found.
      */
     private RequestHandler matchRoute(String requestPath, Map<String, String> pathParams) {
@@ -101,11 +103,14 @@ public class HttpServer {
     }
 
     /**
-     * Checks if the request path matches the route pattern, which may include dynamic segments (e.g., "/cart/:id").
-     * If a match is found, it extracts the dynamic path parameters and stores them in the provided pathParams map.
+     * Checks if the request path matches the route pattern, which may include dynamic segments
+     * (e.g., "/cart/:id").
+     * If a match is found, it extracts the dynamic path parameters and stores them in the
+     * provided pathParams map.
      *
-     * @param routePattern The registered route pattern to match against (e.g., "/cart/:id").
-     * @param requestPath  The actual request path from the incoming HTTP request (e.g., "/cart/123").
+     * @param routePattern The registered route pattern to match against (e.g., "/a/:id/b").
+     * @param requestPath  The actual request path from the incoming HTTP request (e.g.,
+     *                     "/a/123/b").
      * @param pathParams   A map to store extracted path parameters if a match is found.
      * @return true if the request path matches the route pattern; false otherwise.
      */
@@ -118,23 +123,31 @@ public class HttpServer {
             return false;
         }
 
+        // Create a temporary map to hold variables for this specific route evaluation.
+        // We do this to prevent polluting the global pathParams map on partial matching routes.
+        Map<String, String> tempParams = new HashMap<>();
+
         for (int i = 0; i < patternSegments.length; i++) {
             String pattern = patternSegments[i];
             String request = requestSegments[i];
 
             if (pattern.startsWith(":")) {
                 String paramName = pattern.substring(1);
-                pathParams.put(paramName, request);
+                tempParams.put(paramName, request);
             } else if (!pattern.equals(request)) {
                 return false;
             }
         }
+
+        pathParams.putAll(tempParams);
         return true;
     }
 
     /**
      * Starts the HTTP server and listens for incoming client connections.
-     * @throws IOException if an I/O error occurs when waiting for a connection or when handling client requests.
+     *
+     * @throws IOException if an I/O error occurs when waiting for a connection or when handling
+     * client requests.
      */
     public void start() throws IOException {
         System.out.println("HTTP Server started on port " + serverSocket.getLocalPort());
@@ -146,7 +159,8 @@ public class HttpServer {
     }
 
     /**
-     * Handles an individual client connection by reading the incoming HTTP request, dispatching it to the appropriate handler,
+     * Handles an individual client connection by reading the incoming HTTP request, dispatching
+     * it to the appropriate handler,
      * and sending back the HTTP response.
      *
      * @param clientSocket The socket representing the client connection.

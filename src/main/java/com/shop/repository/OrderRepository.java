@@ -20,7 +20,7 @@ public class OrderRepository {
     private static final String ORDER_CUSTOMER_ID = "customer_id";
     private static final String ORDER_TOTAL_AMOUNT = "total_amount";
     private static final String ORDER_STATUS = "status";
-    private static final String ORDER_BILL_ID = "bill_id";
+    private static final String ORDER_TRANSACTION_ID = "transaction_id";
     private static final String ORDER_ID_ALIAS = "order_id";
 
     private static final String ITEM_TABLE_NAME = "order_items";
@@ -64,6 +64,7 @@ public class OrderRepository {
                 ORDER_ALIAS + "." + ORDER_CUSTOMER_ID + ", " +
                 ORDER_ALIAS + "." + ORDER_TOTAL_AMOUNT + ", " +
                 ORDER_ALIAS + "." + ORDER_STATUS + ", " +
+                ORDER_ALIAS + "." + ORDER_TRANSACTION_ID + ", " +
                 ITEM_ALIAS + "." + ITEM_PRODUCT_ID + ", " +
                 ITEM_ALIAS + "." + ITEM_QUANTITY + ", " +
                 PRODUCT_ALIAS + "." + PRODUCT_TITLE + ", " +
@@ -95,9 +96,9 @@ public class OrderRepository {
                         long customerId = rs.getLong(ORDER_CUSTOMER_ID);
                         long totalAmount = rs.getLong(ORDER_TOTAL_AMOUNT);
                         String status = rs.getString(ORDER_STATUS);
-                        Long billId = rs.getLong(ORDER_BILL_ID);
+                        Long billId = rs.getLong(ORDER_TRANSACTION_ID);
 
-                        order = new Order(orderId, customerId, totalAmount, status,billId,items);
+                        order = new Order(orderId, customerId, totalAmount, status, billId, items);
                     }
 
                     long productId = rs.getLong(ITEM_PRODUCT_ID);
@@ -237,9 +238,15 @@ public class OrderRepository {
                 stmt.setLong(2, item.product().id());
                 stmt.setLong(3, item.orderedQuantity());
 
-                int affectedRows = stmt.executeUpdate();
-                if (affectedRows == 0) {
-                    throw new RuntimeException("Insufficient stock for product ID: " + item.product().id());
+                stmt.addBatch();
+            }
+
+            int[] affectedRowsArray = stmt.executeBatch();
+
+            for (int i = 0; i < affectedRowsArray.length; i++) {
+                if (affectedRowsArray[i] == 0) {
+                    OrderItem failedItem = items.get(i);
+                    throw new RuntimeException("Insufficient stock for product ID: " + failedItem.product().id());
                 }
             }
         }
@@ -283,6 +290,40 @@ public class OrderRepository {
         }
     }
 
+    public void updateTransactionId(long orderId, long transactionId) {
+        String sql = "UPDATE %s SET %s = ? WHERE %s = ?".formatted(
+                ORDER_TABLE_NAME, ORDER_TRANSACTION_ID, ORDER_ID);
+
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql)) {
+
+            stmt.setLong(1, transactionId);
+            stmt.setLong(2, orderId);
+            stmt.executeUpdate();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void updateOrderStatus(long orderId, String status) {
+        String sql = "UPDATE %s SET %s = ? WHERE %s = ?".formatted(
+                ORDER_TABLE_NAME, ORDER_STATUS, ORDER_ID);
+
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql)) {
+
+            stmt.setString(1, status);
+            stmt.setLong(2, orderId);
+            stmt.executeUpdate();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
     /**
      * Compensating transaction to run if the 3rd-party payment initiation fails.
      * Marks the order as FAILED and restores product inventory.
@@ -298,9 +339,9 @@ public class OrderRepository {
             connection.setAutoCommit(false);
 
             try (PreparedStatement stmtUpdateOrder = connection.prepareStatement(sqlUpdateOrder);
-                 PreparedStatement stmtRestoreStock = connection.prepareStatement(sqlRestoreStock)) {
+                 PreparedStatement stmtRestoreStock =
+                         connection.prepareStatement(sqlRestoreStock)) {
 
-                // 1. Mark order as FAILED
                 stmtUpdateOrder.setString(1, "FAILED");
                 stmtUpdateOrder.setLong(2, orderId);
                 stmtUpdateOrder.executeUpdate();
@@ -316,7 +357,8 @@ public class OrderRepository {
 
             } catch (Exception e) {
                 connection.rollback();
-                throw new RuntimeException("CRITICAL: Failed to execute compensating transaction for order " + orderId, e);
+                throw new RuntimeException("CRITICAL: Failed to execute compensating transaction " +
+                        "for order " + orderId, e);
             }
         } catch (SQLException e) {
             e.printStackTrace();

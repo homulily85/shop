@@ -13,32 +13,14 @@ public class OrderService {
     private OrderService() {
     }
 
-    /**
-     * Provides access to the singleton instance of OrderService.
-     *
-     * @return Singleton instance of OrderService.
-     */
     public static OrderService getInstance() {
         return Holder.INSTANCE;
     }
 
-    /**
-     * Get an order by its ID.
-     *
-     * @param id Order ID as a string. It will be parsed to a long before querying the database.
-     * @return Order with the given ID, or null if not found.
-     * @throws NumberFormatException if the provided ID string cannot be parsed to a long.
-     */
     public Order getOrderById(String id) {
         return orderRepository.getOrderById(Long.parseLong(id));
     }
 
-    /**
-     * Checkout the cart for the given cart ID and customer ID.
-     *
-     * @param customerId ID of the customer placing the order.
-     * @throws IllegalStateException if the cart is empty.
-     */
     public long checkout(String customerId) {
         var cart = cartService.getCart(customerId);
         if (cart == null || cart.items().isEmpty()) {
@@ -52,16 +34,43 @@ public class OrderService {
         var newOderId =
                 orderRepository.createPendingOrderTransaction(new OrderDTO(Long.parseLong(customerId), totalAmount, cart.items()));
 
-        var transactionId = paymentApiClient.makePayment(newOderId, Long.parseLong(customerId),
-                totalAmount);
+        long returnedTransactionId;
+        try {
+            returnedTransactionId = paymentApiClient.makePayment(newOderId,
+                    Long.parseLong(customerId),
+                    totalAmount);
+        } catch (IllegalArgumentException e) {
+            if ("INSUFFICIENT_BALANCE".equals(e.getMessage())) {
+                orderRepository.markOrderFailedAndRestoreStock(newOderId, cart.items());
+                throw new IllegalArgumentException("Payment failed: Insufficient balance.");
+            }
+            throw e;
+        }
 
-        if (transactionId < 0) {
+        if (returnedTransactionId < 0) {
             orderRepository.markOrderFailedAndRestoreStock(newOderId, cart.items());
             throw new RuntimeException("Payment service unavailable. Your order was cancelled and" +
                     " you were not charged.");
         }
 
-        return transactionId;
+        orderRepository.updateTransactionId(newOderId, returnedTransactionId);
+
+        return returnedTransactionId;
+    }
+
+    public void handleCallback(String orderId, boolean success) {
+        long orderIdLong = Long.parseLong(orderId);
+        var order = orderRepository.getOrderById(orderIdLong);
+        if (order == null) {
+            throw new IllegalArgumentException("Order not found for ID: " + orderId);
+        }
+
+        if (success) {
+            orderRepository.updateOrderStatus(orderIdLong, "SUCCESS");
+            cartService.clearCart(String.valueOf(order.customerId()));
+        } else {
+            orderRepository.markOrderFailedAndRestoreStock(orderIdLong, order.items());
+        }
     }
 
     private static class Holder {

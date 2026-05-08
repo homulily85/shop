@@ -61,6 +61,11 @@ public class CartService {
             return;
         }
 
+        if (quantity > product.availableQuantity()) {
+            throw new IllegalArgumentException("Requested quantity exceeds available stock for " +
+                    "product ID " + productId);
+        }
+
         if (currentQuantity < 0) {
             cartRepository.addItemToCart(activeCartId, productId, quantity);
         } else {

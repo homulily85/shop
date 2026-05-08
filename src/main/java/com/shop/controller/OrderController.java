@@ -45,5 +45,25 @@ public class OrderController extends AbstractController {
             return new HttpResponse(200, "OK", objectMapper.writeValueAsString(Map.of(
                     "orderId", orderId)));
         }));
+
+        server.addRoute("/bill/:id/payment-result", ((method, queryParams, pathParams, headers,
+                                                     body) -> {
+            if (!method.equals("POST")) {
+                return new HttpResponse(405, "Method Not Allowed", null);
+            }
+
+            var requestBodyJson = objectMapper.readTree(body);
+
+            if (!requestBodyJson.has("success")) {
+                return new HttpResponse(400, "Bad Request", objectMapper.writeValueAsString(Map.of(
+                        "error", "Missing 'success' field in request body")));
+            }
+
+            orderService.handleCallback(pathParams.get("id"),
+                    requestBodyJson.get("success").asBoolean());
+
+            return new HttpResponse(200, "OK", null);
+        }));
+
     }
 }

@@ -31,11 +31,20 @@ public class PaymentApiClient {
             String responseBody = webClient.post(SERVER_BANK_URL + "/transfer", requestBody);
 
             var responseJson = objectMapper.readTree(responseBody);
-            return responseJson.get("id").asLong();
+
+            if (responseJson.has("message") && "INSUFFICIENT_BALANCE".equals(responseJson.get("message").asText())) {
+                throw new IllegalArgumentException("INSUFFICIENT_BALANCE");
+            }
+
+            return responseJson.get("data").get("transactions").asLong();
         } catch (JsonProcessingException e) {
             e.printStackTrace();
             throw new RuntimeException("Failed to parse JSON for payment gateway", e);
         } catch (RuntimeException e) {
+            if (e.getMessage() != null && e.getMessage().contains("INSUFFICIENT_BALANCE")) {
+                throw new IllegalArgumentException("INSUFFICIENT_BALANCE");
+            }
+
             System.err.println("Payment gateway request failed: " + e.getMessage());
             return -1;
         }
@@ -45,5 +54,4 @@ public class PaymentApiClient {
         private static final PaymentApiClient INSTANCE = new PaymentApiClient();
 
     }
-
 }

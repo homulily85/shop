@@ -5,6 +5,7 @@ import com.shop.controller.CartController;
 import com.shop.controller.OrderController;
 import com.shop.controller.ProductController;
 import com.shop.controller.UploadController;
+import com.shop.scheduler.JobScheduler;
 import com.shop.webserver.HttpResponse;
 import com.shop.webserver.HttpServer;
 
@@ -15,6 +16,10 @@ public class Main {
     public static void main(String[] args) throws IOException {
         var server = new HttpServer(Integer.parseInt(System.getenv("PORT")));
         ObjectMapper mapper = new ObjectMapper();
+
+        JobScheduler jobScheduler = new JobScheduler();
+        jobScheduler.startJobs();
+        Runtime.getRuntime().addShutdownHook(new Thread(jobScheduler::shutdown));
 
         server.addRoute("/test",
                 (method, queryParams, pathParams, headers, body) -> {

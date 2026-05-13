@@ -10,8 +10,11 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class OrderRepository {
     private static final String ORDER_TABLE_NAME = "orders";
@@ -21,6 +24,7 @@ public class OrderRepository {
     private static final String ORDER_TOTAL_AMOUNT = "total_amount";
     private static final String ORDER_STATUS = "status";
     private static final String ORDER_TRANSACTION_ID = "transaction_id";
+    private static final String ORDER_UPDATED_AT = "updated_at";
     private static final String ORDER_ID_ALIAS = "order_id";
 
     private static final String ITEM_TABLE_NAME = "order_items";
@@ -65,6 +69,7 @@ public class OrderRepository {
                 ORDER_ALIAS + "." + ORDER_TOTAL_AMOUNT + ", " +
                 ORDER_ALIAS + "." + ORDER_STATUS + ", " +
                 ORDER_ALIAS + "." + ORDER_TRANSACTION_ID + ", " +
+                ORDER_ALIAS + "." + ORDER_UPDATED_AT + ", " +
                 ITEM_ALIAS + "." + ITEM_PRODUCT_ID + ", " +
                 ITEM_ALIAS + "." + ITEM_QUANTITY + ", " +
                 PRODUCT_ALIAS + "." + PRODUCT_TITLE + ", " +
@@ -97,8 +102,12 @@ public class OrderRepository {
                         long totalAmount = rs.getLong(ORDER_TOTAL_AMOUNT);
                         String status = rs.getString(ORDER_STATUS);
                         Long billId = rs.getLong(ORDER_TRANSACTION_ID);
+                        LocalDateTime updatedAt =
+                                LocalDateTime.of(rs.getDate(ORDER_UPDATED_AT).toLocalDate(),
+                                        rs.getTime(ORDER_UPDATED_AT).toLocalTime());
 
-                        order = new Order(orderId, customerId, totalAmount, status, billId, items);
+                        order = new Order(orderId, customerId, totalAmount, status, billId, items
+                                , updatedAt);
                     }
 
                     long productId = rs.getLong(ITEM_PRODUCT_ID);
@@ -125,81 +134,87 @@ public class OrderRepository {
         }
     }
 
-    /**
-     * Execute a checkout transaction that updates product quantities, creates an order, and
-     * inserts order items.
-     *
-     * @param order Order details to be created.
-     * @param items List of order items to be associated with the order.
-     */
+    public List<Order> getOrderByStatus(String status) {
+        String sql = "SELECT " +
+                ORDER_ALIAS + "." + ORDER_ID + " AS " + ORDER_ID_ALIAS + ", " +
+                ORDER_ALIAS + "." + ORDER_CUSTOMER_ID + ", " +
+                ORDER_ALIAS + "." + ORDER_TOTAL_AMOUNT + ", " +
+                ORDER_ALIAS + "." + ORDER_STATUS + ", " +
+                ORDER_ALIAS + "." + ORDER_TRANSACTION_ID + ", " +
+                ORDER_ALIAS + "." + ORDER_UPDATED_AT + ", " +
+                ITEM_ALIAS + "." + ITEM_PRODUCT_ID + ", " +
+                ITEM_ALIAS + "." + ITEM_QUANTITY + ", " +
+                PRODUCT_ALIAS + "." + PRODUCT_TITLE + ", " +
+                PRODUCT_ALIAS + "." + PRODUCT_PRICE + ", " +
+                PRODUCT_ALIAS + "." + PRODUCT_DESCRIPTION + ", " +
+                PRODUCT_ALIAS + "." + PRODUCT_QUANTITY + ", " +
+                PRODUCT_ALIAS + "." + PRODUCT_CATEGORY + ", " +
+                PRODUCT_ALIAS + "." + PRODUCT_STATUS + ", " +
+                PRODUCT_ALIAS + "." + PRODUCT_IMAGE_LINK + " " +
+                "FROM " + ORDER_TABLE_NAME + " " + ORDER_ALIAS + " " +
+                "LEFT JOIN " + ITEM_TABLE_NAME + " " + ITEM_ALIAS +
+                " ON " + ORDER_ALIAS + "." + ORDER_ID + " = " + ITEM_ALIAS + "." + ITEM_ORDER_ID + " " +
+                " LEFT JOIN " + PRODUCT_TABLE_NAME + " " + PRODUCT_ALIAS + " " +
+                " ON " + PRODUCT_ALIAS + "." + PRODUCT_ID + " = " + ITEM_ALIAS + "." + ITEM_PRODUCT_ID +
+                " WHERE " + ORDER_ALIAS + "." + ORDER_STATUS + " = ?";
 
-    public void executeCheckoutTransaction(OrderDTO order, List<OrderItem> items) {
-        String sqlUpdateProductAvailableQuantity = ("UPDATE %s SET %s = %s - ? WHERE %s = ? AND " +
-                "%s >= ?")
-                .formatted(PRODUCT_TABLE_NAME, PRODUCT_QUANTITY, PRODUCT_QUANTITY,
-                        PRODUCT_ID, PRODUCT_QUANTITY);
 
-        String sqlInsertOrder = "INSERT INTO %s (%s, %s) VALUES (?, ?)".formatted(
-                ORDER_TABLE_NAME, ORDER_CUSTOMER_ID, ORDER_TOTAL_AMOUNT);
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql)) {
 
-        String sqlInsetOrderItem = "INSERT INTO %s(%s, %s, %s) VALUES (?, ?, ?)".formatted(
-                ITEM_TABLE_NAME, ITEM_ORDER_ID, ITEM_PRODUCT_ID, ITEM_QUANTITY);
+            stmt.setString(1, status);
 
-        try (Connection connection = DatabaseManager.getConnection()) {
-            connection.setAutoCommit(false);
+            try (ResultSet rs = stmt.executeQuery()) {
+                // Ensure orders are returned in the order they were created
+                Map<Long, Order> orderMap = new LinkedHashMap<>();
 
-            try (PreparedStatement stmtUpdateProductAvailableQuantity =
-                         connection.prepareStatement(sqlUpdateProductAvailableQuantity);
-                 PreparedStatement stmtInsertOrder = connection.prepareStatement(sqlInsertOrder,
-                         PreparedStatement.RETURN_GENERATED_KEYS);
-                 PreparedStatement stmtInsertOrderItem =
-                         connection.prepareStatement(sqlInsetOrderItem)) {
+                while (rs.next()) {
+                    long orderId = rs.getLong(ORDER_ID_ALIAS);
 
-                for (OrderItem item : items) {
-                    stmtUpdateProductAvailableQuantity.setLong(1, item.orderedQuantity());
-                    stmtUpdateProductAvailableQuantity.setLong(2, item.product().id());
-                    stmtUpdateProductAvailableQuantity.setLong(3, item.orderedQuantity());
+                    Order order = orderMap.get(orderId);
+                    if (order == null) {
+                        long customerId = rs.getLong(ORDER_CUSTOMER_ID);
+                        long totalAmount = rs.getLong(ORDER_TOTAL_AMOUNT);
+                        String orderStatus = rs.getString(ORDER_STATUS);
+                        Long billId = rs.getLong(ORDER_TRANSACTION_ID);
+                        LocalDateTime updatedAt =
+                                LocalDateTime.of(rs.getDate(ORDER_UPDATED_AT).toLocalDate(),
+                                        rs.getTime(ORDER_UPDATED_AT).toLocalTime());
 
-                    int affectedRows = stmtUpdateProductAvailableQuantity.executeUpdate();
-                    if (affectedRows == 0) {
-                        connection.rollback();
-                        throw new RuntimeException("Not enough stock for product ID: " + item.product().id());
+
+                        if (rs.wasNull()) {
+                            billId = null;
+                        }
+
+                        order = new Order(orderId, customerId, totalAmount, orderStatus, billId,
+                                new ArrayList<>(), updatedAt);
+                        orderMap.put(orderId, order);
                     }
+
+                    long productId = rs.getLong(ITEM_PRODUCT_ID);
+                    String productTitle = rs.getString(PRODUCT_TITLE);
+                    long productPrice = rs.getLong(PRODUCT_PRICE);
+                    String productDescription = rs.getString(PRODUCT_DESCRIPTION);
+                    long productQuantity = rs.getLong(PRODUCT_QUANTITY);
+                    String productCategory = rs.getString(PRODUCT_CATEGORY);
+                    String productStatus = rs.getString(PRODUCT_STATUS);
+                    String productImageLink = rs.getString(PRODUCT_IMAGE_LINK);
+
+                    int quantity = rs.getInt(ITEM_QUANTITY);
+
+                    Product product = new Product(productId, productTitle, productPrice,
+                            productDescription, productQuantity,
+                            productCategory, productStatus, productImageLink);
+
+                    order.items().add(new OrderItem(product, quantity));
                 }
 
-                stmtInsertOrder.setLong(1, order.customerId());
-                stmtInsertOrder.setLong(2, order.totalAmount());
-                stmtInsertOrder.executeUpdate();
-
-                long orderId;
-                try (ResultSet generatedKeys = stmtInsertOrder.getGeneratedKeys()) {
-                    if (generatedKeys.next()) {
-                        orderId = generatedKeys.getLong(1);
-                    } else {
-                        connection.rollback();
-                        throw new SQLException("Creating order failed, no ID obtained.");
-                    }
-                }
-
-                for (OrderItem item : items) {
-                    stmtInsertOrderItem.setLong(1, orderId);
-                    stmtInsertOrderItem.setLong(2, item.product().id());
-                    stmtInsertOrderItem.setLong(3, item.orderedQuantity());
-                    stmtInsertOrderItem.addBatch();
-                }
-
-                stmtInsertOrderItem.executeBatch();
-
-                connection.commit();
-
-            } catch (Exception e) {
-                connection.rollback();
-                throw new RuntimeException("Transaction failed and was rolled back: " + e.getMessage(), e);
+                return new ArrayList<>(orderMap.values());
             }
 
         } catch (SQLException e) {
             e.printStackTrace();
-            throw new RuntimeException(e);
+            return new ArrayList<>();
         }
     }
 
@@ -249,6 +264,24 @@ public class OrderRepository {
                     throw new RuntimeException("Insufficient stock for product ID: " + failedItem.product().id());
                 }
             }
+        }
+    }
+
+    private void addProductStock(List<OrderItem> items) throws SQLException {
+        String sql =
+                "UPDATE " + PRODUCT_TABLE_NAME +
+                        " SET " + PRODUCT_QUANTITY + " = " + PRODUCT_QUANTITY + " + ?" +
+                        " WHERE " + PRODUCT_ID + " = ?";
+
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql)) {
+            for (OrderItem item : items) {
+                stmt.setLong(1, item.orderedQuantity());
+                stmt.setLong(2, item.product().id());
+
+                stmt.addBatch();
+            }
+            stmt.executeBatch();
         }
     }
 

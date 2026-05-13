@@ -5,6 +5,8 @@ import com.shop.dto.OrderDTO;
 import com.shop.model.Order;
 import com.shop.repository.OrderRepository;
 
+import java.time.LocalDateTime;
+
 public class OrderService {
     private final OrderRepository orderRepository = OrderRepository.getInstance();
     private final CartService cartService = CartService.getInstance();
@@ -74,6 +76,17 @@ public class OrderService {
             cartService.clearCart(String.valueOf(order.customerId()));
         } else {
             orderRepository.markOrderFailedAndRestoreStock(orderIdLong, order.items());
+        }
+    }
+
+    public void cleanPendingOrders() {
+        var pendingOrders = orderRepository.getOrderByStatus("PENDING");
+        System.out.println(pendingOrders);
+        for (var order : pendingOrders) {
+            if (order.updatedAt().isBefore(LocalDateTime.now().minusMinutes(15))) {
+                System.out.println("[OrderService] Cleaning up pending order ID: " + order.id());
+                orderRepository.markOrderFailedAndRestoreStock(order.id(), order.items());
+            }
         }
     }
 

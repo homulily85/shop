@@ -73,14 +73,19 @@ public class Client {
     }
 
     /**
-     * Uploads a file to the MinIO bucket.
+     * Uploads an image file to the MinIO bucket.
      *
      * @param fileData Byte array representing the file data to be uploaded.
      * @return The name of newly uploaded file on server.
+     * @throws IllegalArgumentException if the file is not an image.
      */
     public String upload(byte[] fileData) {
         Tika tika = new Tika();
         String mimeTypeString = tika.detect(fileData);
+
+        if (mimeTypeString == null || !mimeTypeString.startsWith("image/")) {
+            throw new IllegalArgumentException("Invalid file type. Only image files are allowed. Detected: " + mimeTypeString);
+        }
 
         String extension;
         try {
@@ -89,6 +94,7 @@ public class Client {
         } catch (Exception e) {
             extension = ".bin";
         }
+
         String objectName = System.currentTimeMillis() + extension;
 
         try {
@@ -96,13 +102,17 @@ public class Client {
                     PutObjectArgs.builder()
                             .bucket(BUCKET_NAME)
                             .object(objectName)
-                            .stream(new ByteArrayInputStream(fileData), (long) fileData.length,
-                                    (long) -1)
+                            .stream(new ByteArrayInputStream(fileData), (long) fileData.length, (long) -1)
+                            .contentType(mimeTypeString)
                             .build()
             );
 
-            return String.format(objectName);
+            return objectName;
+
         } catch (MinioException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error occurred while uploading to MinIO", e);
+        } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }

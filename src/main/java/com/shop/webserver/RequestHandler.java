@@ -18,8 +18,8 @@ public interface RequestHandler {
      *                   indicate a failure in processing the request.
      */
     HttpResponse handle(String method,
-                        Map<String, String> queryParams,
-                        Map<String, String> pathParams,
-                        Map<String, String> headers,
-                        byte[] body) throws Exception;
+                            Map<String, String> queryParams,
+                            Map<String, String> pathParams,
+                            Map<String, String> headers,
+                            byte[] body) throws Exception;
 }

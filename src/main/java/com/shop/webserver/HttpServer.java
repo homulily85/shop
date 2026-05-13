@@ -51,28 +51,28 @@ public class HttpServer {
                 try {
                     String errorMsg = e.getMessage() != null ? e.getMessage() : "Invalid request " +
                                                                                 "data";
-                    return new HttpResponse(400, "Bad Request",
+                    return new HttpTextResponse(400, "Bad Request",
                             mapper.writeValueAsString(Map.of("error", errorMsg)));
                 } catch (Exception ex) {
-                    return new HttpResponse(400, "Bad Request", "");
+                    return new HttpTextResponse(400, "Bad Request", "");
                 }
             } catch (Exception e) {
                 e.printStackTrace();
                 try {
                     String errorMsg = e.getMessage() != null ? e.getMessage() : "Internal Server " +
                                                                                 "Error";
-                    return new HttpResponse(500, "Internal Server Error",
+                    return new HttpTextResponse(500, "Internal Server Error",
                             mapper.writeValueAsString(Map.of("error", errorMsg)));
                 } catch (Exception ex) {
-                    return new HttpResponse(500, "Internal Server Error", "");
+                    return new HttpTextResponse(500, "Internal Server Error", "");
                 }
             }
         } else {
             try {
-                return new HttpResponse(404, "Not Found",
+                return new HttpTextResponse(404, "Not Found",
                         mapper.writeValueAsString(Map.of("message", "Route not found.")));
             } catch (Exception e) {
-                return new HttpResponse(404, "Not Found", "");
+                return new HttpTextResponse(404, "Not Found", "");
             }
         }
     }

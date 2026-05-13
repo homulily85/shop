@@ -47,7 +47,7 @@ public class OrderController extends AbstractController {
         }));
 
         server.addRoute("/bill/:id/payment-result", ((method, queryParams, pathParams, headers,
-                                                     body) -> {
+                body) -> {
             if (!method.equals("POST")) {
                 return new HttpResponse(405, "Method Not Allowed", null);
             }

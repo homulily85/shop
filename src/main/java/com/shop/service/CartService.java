@@ -25,8 +25,10 @@ public class CartService {
      *
      * @param customerId ID of the customer whose cart items are to be retrieved.
      * @return List of OrderItem objects representing the items in the cart.
-     * If the customer has no active cart or if the cart is empty, an empty list will be returned.
-     * @throws NumberFormatException if the provided customer ID string cannot be parsed to a long.
+     *         If the customer has no active cart or if the cart is empty, an empty
+     *         list will be returned.
+     * @throws NumberFormatException if the provided customer ID string cannot be
+     *                               parsed to a long.
      */
     public Cart getCart(String customerId) {
         return cartRepository.getCartItemsInActiveCartOfCustomer(Long.parseLong(customerId));
@@ -34,7 +36,8 @@ public class CartService {
     }
 
     /**
-     * Update the cart by adding or updating the quantityInCart of a specific product in the active
+     * Update the cart by adding or updating the quantityInCart of a specific
+     * product in the active
      * cart associated with the given customer ID.
      *
      * @param customerId ID of the customer whose cart is to be updated.
@@ -50,8 +53,7 @@ public class CartService {
         var activeCartId = cartRepository.getActiveCartOfCustomer(Long.parseLong(customerId));
 
         if (activeCartId < 0) {
-            activeCartId =
-                    cartRepository.createNewActiveCartForCustomer(Long.parseLong(customerId));
+            activeCartId = cartRepository.createNewActiveCartForCustomer(Long.parseLong(customerId));
         }
 
         var currentQuantity = cartRepository.getQuantityOfAItem(activeCartId, productId);
@@ -75,7 +77,8 @@ public class CartService {
     }
 
     /**
-     * Remove a specific product from the active cart associated with the given customer ID.
+     * Remove a specific product from the active cart associated with the given
+     * customer ID.
      *
      * @param customerId ID of the cart from which to remove the product.
      * @param productId  ID of the product to be removed from the cart.

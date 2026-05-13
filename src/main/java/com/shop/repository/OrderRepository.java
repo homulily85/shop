@@ -82,7 +82,7 @@ public class OrderRepository {
                 " WHERE " + ORDER_ALIAS + "." + ORDER_ID + " = ?";
 
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement stmt = connection.prepareStatement(sql)) {
+                PreparedStatement stmt = connection.prepareStatement(sql)) {
 
             stmt.setLong(1, id);
 
@@ -113,8 +113,7 @@ public class OrderRepository {
                     int quantity = rs.getInt(ITEM_QUANTITY);
                     items.add(new OrderItem(new Product(productId, productTitle, productPrice,
                             productDescription, productQuantity,
-                            productCategory, productStatus, productImageLink)
-                            , quantity));
+                            productCategory, productStatus, productImageLink), quantity));
                 }
                 return order;
             }
@@ -126,7 +125,8 @@ public class OrderRepository {
     }
 
     /**
-     * Execute a checkout transaction that updates product quantities, creates an order, and
+     * Execute a checkout transaction that updates product quantities, creates an
+     * order, and
      * inserts order items.
      *
      * @param order Order details to be created.
@@ -148,12 +148,11 @@ public class OrderRepository {
         try (Connection connection = DatabaseManager.getConnection()) {
             connection.setAutoCommit(false);
 
-            try (PreparedStatement stmtUpdateProductAvailableQuantity =
-                         connection.prepareStatement(sqlUpdateProductAvailableQuantity);
-                 PreparedStatement stmtInsertOrder = connection.prepareStatement(sqlInsertOrder,
-                         PreparedStatement.RETURN_GENERATED_KEYS);
-                 PreparedStatement stmtInsertOrderItem =
-                         connection.prepareStatement(sqlInsetOrderItem)) {
+            try (PreparedStatement stmtUpdateProductAvailableQuantity = connection
+                    .prepareStatement(sqlUpdateProductAvailableQuantity);
+                    PreparedStatement stmtInsertOrder = connection.prepareStatement(sqlInsertOrder,
+                            PreparedStatement.RETURN_GENERATED_KEYS);
+                    PreparedStatement stmtInsertOrderItem = connection.prepareStatement(sqlInsetOrderItem)) {
 
                 for (OrderItem item : items) {
                     stmtUpdateProductAvailableQuantity.setLong(1, item.orderedQuantity());
@@ -227,10 +226,9 @@ public class OrderRepository {
     }
 
     private void deductProductStock(Connection connection, List<OrderItem> items) throws SQLException {
-        String sql =
-                "UPDATE " + PRODUCT_TABLE_NAME +
-                        " SET " + PRODUCT_QUANTITY + " = " + PRODUCT_QUANTITY + " - ?" +
-                        " WHERE " + PRODUCT_ID + " = ? AND " + PRODUCT_QUANTITY + " >= ?";
+        String sql = "UPDATE " + PRODUCT_TABLE_NAME +
+                " SET " + PRODUCT_QUANTITY + " = " + PRODUCT_QUANTITY + " - ?" +
+                " WHERE " + PRODUCT_ID + " = ? AND " + PRODUCT_QUANTITY + " >= ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             for (OrderItem item : items) {
@@ -275,9 +273,8 @@ public class OrderRepository {
     }
 
     private void insertOrderItems(Connection connection, long orderId, List<OrderItem> items) throws SQLException {
-        String sql =
-                "INSERT INTO %s (%s, %s, %s) VALUES (?, ?, ?)".formatted(ITEM_TABLE_NAME,
-                        ORDER_ID_ALIAS, ITEM_PRODUCT_ID, ITEM_QUANTITY);
+        String sql = "INSERT INTO %s (%s, %s, %s) VALUES (?, ?, ?)".formatted(ITEM_TABLE_NAME,
+                ORDER_ID_ALIAS, ITEM_PRODUCT_ID, ITEM_QUANTITY);
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             for (OrderItem item : items) {
@@ -295,7 +292,7 @@ public class OrderRepository {
                 ORDER_TABLE_NAME, ORDER_TRANSACTION_ID, ORDER_ID);
 
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement stmt = connection.prepareStatement(sql)) {
+                PreparedStatement stmt = connection.prepareStatement(sql)) {
 
             stmt.setLong(1, transactionId);
             stmt.setLong(2, orderId);
@@ -312,7 +309,7 @@ public class OrderRepository {
                 ORDER_TABLE_NAME, ORDER_STATUS, ORDER_ID);
 
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement stmt = connection.prepareStatement(sql)) {
+                PreparedStatement stmt = connection.prepareStatement(sql)) {
 
             stmt.setString(1, status);
             stmt.setLong(2, orderId);
@@ -339,8 +336,7 @@ public class OrderRepository {
             connection.setAutoCommit(false);
 
             try (PreparedStatement stmtUpdateOrder = connection.prepareStatement(sqlUpdateOrder);
-                 PreparedStatement stmtRestoreStock =
-                         connection.prepareStatement(sqlRestoreStock)) {
+                    PreparedStatement stmtRestoreStock = connection.prepareStatement(sqlRestoreStock)) {
 
                 stmtUpdateOrder.setString(1, "FAILED");
                 stmtUpdateOrder.setLong(2, orderId);

@@ -49,9 +49,11 @@ public class CartRepository {
     /**
      * Get the items in the active cart for a given customer ID.
      *
-     * @param customerId ID of the customer whose active cart items are to be retrieved.
-     * @return Cart object containing the active cart and its items for the specified customer.
-     * If no active cart exists, returns null.
+     * @param customerId ID of the customer whose active cart items are to be
+     *                   retrieved.
+     * @return Cart object containing the active cart and its items for the
+     *         specified customer.
+     *         If no active cart exists, returns null.
      */
     public Cart getCartItemsInActiveCartOfCustomer(long customerId) {
         String sql = "SELECT " +
@@ -77,7 +79,7 @@ public class CartRepository {
                 " AND " + CART_ALIAS + "." + CART_STATUS + " = 'ACTIVE'";
 
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement stmt = connection.prepareStatement(sql)) {
+                PreparedStatement stmt = connection.prepareStatement(sql)) {
 
             stmt.setLong(1, customerId);
 
@@ -106,8 +108,7 @@ public class CartRepository {
                     int quantity = rs.getInt(ITEM_QUANTITY);
                     items.add(new OrderItem(new Product(productId, productTitle, productPrice,
                             productDescription, productQuantity,
-                            productCategory, productStatus, productImageLink)
-                            , quantity));
+                            productCategory, productStatus, productImageLink), quantity));
                 }
                 return cart;
             }
@@ -122,8 +123,9 @@ public class CartRepository {
      * Get the ID of the active cart for a given customer ID.
      *
      * @param customerId ID of the customer whose active cart ID is to be retrieved.
-     * @return ID of the active cart for the specified customer. If no active cart exists,
-     * returns -1.
+     * @return ID of the active cart for the specified customer. If no active cart
+     *         exists,
+     *         returns -1.
      */
     public long getActiveCartOfCustomer(long customerId) {
         String sql = "SELECT " + CART_ID + " FROM " + CART_TABLE_NAME +
@@ -131,7 +133,7 @@ public class CartRepository {
                 " AND " + CART_STATUS + " = 'ACTIVE'";
 
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement stmt = connection.prepareStatement(sql)) {
+                PreparedStatement stmt = connection.prepareStatement(sql)) {
 
             stmt.setLong(1, customerId);
 
@@ -151,17 +153,19 @@ public class CartRepository {
     /**
      * Create a new active cart for a given customer ID.
      *
-     * @param customerId ID of the customer for whom the new active cart is to be created.
-     * @return ID of the newly created active cart for the specified customer. If creation fails,
-     * returns -1.
+     * @param customerId ID of the customer for whom the new active cart is to be
+     *                   created.
+     * @return ID of the newly created active cart for the specified customer. If
+     *         creation fails,
+     *         returns -1.
      */
     public long createNewActiveCartForCustomer(long customerId) {
-        String sql =
-                "INSERT INTO " + CART_TABLE_NAME + " (" + CART_CUSTOMER_ID + ", " + CART_STATUS + ") VALUES (?, 'ACTIVE')";
+        String sql = "INSERT INTO " + CART_TABLE_NAME + " (" + CART_CUSTOMER_ID + ", " + CART_STATUS
+                + ") VALUES (?, 'ACTIVE')";
 
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement stmt = connection.prepareStatement(sql,
-                     PreparedStatement.RETURN_GENERATED_KEYS)) {
+                PreparedStatement stmt = connection.prepareStatement(sql,
+                        PreparedStatement.RETURN_GENERATED_KEYS)) {
 
             stmt.setLong(1, customerId);
             int affectedRows = stmt.executeUpdate();
@@ -189,7 +193,7 @@ public class CartRepository {
                 " AND " + ITEM_PRODUCT_ID + " = ?";
 
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement stmt = connection.prepareStatement(sql)) {
+                PreparedStatement stmt = connection.prepareStatement(sql)) {
 
             stmt.setLong(1, cartId);
             stmt.setLong(2, productId);
@@ -216,9 +220,8 @@ public class CartRepository {
     public void addItemToCart(long activeCartId, long productId, long quantity) {
         String sql = "INSERT INTO " + ITEM_TABLE_NAME + " (" + ITEM_CART_ID + ", " +
                 ITEM_PRODUCT_ID + ", " + ITEM_QUANTITY + ") VALUES (?, ?, ?)";
-
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement stmt = connection.prepareStatement(sql)) {
+                PreparedStatement stmt = connection.prepareStatement(sql)) {
 
             stmt.setLong(1, activeCartId);
             stmt.setLong(2, productId);
@@ -243,9 +246,8 @@ public class CartRepository {
         }
         String sql = "UPDATE " + ITEM_TABLE_NAME + " SET " + ITEM_QUANTITY + " = ? " +
                 "WHERE " + ITEM_CART_ID + " = ? AND " + ITEM_PRODUCT_ID + " = ?";
-
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement stmt = connection.prepareStatement(sql)) {
+                PreparedStatement stmt = connection.prepareStatement(sql)) {
 
             stmt.setLong(1, quantity);
             stmt.setLong(2, cartId);
@@ -268,7 +270,7 @@ public class CartRepository {
                 " WHERE " + ITEM_CART_ID + " = ? AND " + ITEM_PRODUCT_ID + " = ?";
 
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement stmt = connection.prepareStatement(sql)) {
+                PreparedStatement stmt = connection.prepareStatement(sql)) {
 
             stmt.setLong(1, cartId);
             stmt.setLong(2, productId);
@@ -289,7 +291,7 @@ public class CartRepository {
                 "WHERE " + CART_ID + " = ?";
 
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement stmt = connection.prepareStatement(sql)) {
+                PreparedStatement stmt = connection.prepareStatement(sql)) {
 
             stmt.setLong(1, cartId);
             stmt.executeUpdate();

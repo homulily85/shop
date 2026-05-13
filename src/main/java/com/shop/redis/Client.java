@@ -1,5 +1,6 @@
 package com.shop.redis;
 
+import com.shop.service.VaultService;
 import redis.clients.jedis.ConnectionPoolConfig;
 import redis.clients.jedis.DefaultJedisClientConfig;
 import redis.clients.jedis.RedisClient;
@@ -8,6 +9,8 @@ import redis.clients.jedis.RedisClient;
  * Wrapper for RedisClient.
  */
 public class Client {
+    private static final String REDIS_HOST = VaultService.getInstance().getSecret("REDIS_HOST");
+    private static final int REDIS_PORT = Integer.parseInt(VaultService.getInstance().getSecret("REDIS_PORT"));
     private Client() {
 
     }
@@ -23,8 +26,7 @@ public class Client {
         connectPoolConfig.setMinIdle(16);
 
         return RedisClient.builder()
-                .hostAndPort(System.getenv("REDIS_HOST"), Integer.parseInt(System.getenv(
-                        "REDIS_PORT")))
+                .hostAndPort(REDIS_HOST, REDIS_PORT)
                 .clientConfig(
                         DefaultJedisClientConfig.builder()
                                 .socketTimeoutMillis(5000)

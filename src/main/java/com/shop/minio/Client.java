@@ -1,5 +1,6 @@
 package com.shop.minio;
 
+import com.shop.service.VaultService;
 import io.minio.BucketExistsArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
@@ -12,8 +13,15 @@ import java.io.ByteArrayInputStream;
  * Wrapper for MinIO client that handles bucket creation and file uploads.
  */
 public class Client {
-    private static final String bucketName = System.getenv("MINIO_BUCKET_NAME");
-    private static final String minioEndpoint = System.getenv("MINIO_ENDPOINT");
+    private static final String BUCKET_NAME = VaultService.getInstance().getSecret(
+            "MINIO_BUCKET_NAME");
+    private static final String MINIO_ENDPOINT = VaultService.getInstance().getSecret(
+            "MINIO_ENDPOINT");
+    private static final String MINIO_ROOT_USER = VaultService.getInstance().getSecret(
+            "MINIO_ROOT_USER");
+    private static final String MINIO_ROOT_PASSWORD = VaultService.getInstance().getSecret(
+            "MINIO_ROOT_PASSWORD");
+
     private final MinioClient minioClient;
 
     private Client() {
@@ -21,25 +29,27 @@ public class Client {
     }
 
     /**
-     * Initializes the MinIO client and ensures the bucket exists. If the bucket does not exist, it will be created.
+     * Initializes the MinIO client and ensures the bucket exists. If the bucket does not exist,
+     * it will be created.
+     *
      * @return Initialized MinIO client ready for use.
      */
     private static MinioClient create() {
         MinioClient minioClient = MinioClient.builder()
-                .endpoint(minioEndpoint)
-                .credentials(System.getenv("MINIO_ROOT_USER"), System.getenv("MINIO_ROOT_PASSWORD"))
+                .endpoint(MINIO_ENDPOINT)
+                .credentials(MINIO_ROOT_USER, MINIO_ROOT_PASSWORD)
                 .build();
 
         try {
             boolean isExist = minioClient.bucketExists(
                     BucketExistsArgs.builder()
-                            .bucket(bucketName)
+                            .bucket(BUCKET_NAME)
                             .build()
             );
             if (!isExist) {
                 minioClient.makeBucket(
                         MakeBucketArgs.builder()
-                                .bucket(bucketName)
+                                .bucket(BUCKET_NAME)
                                 .build());
             }
         } catch (MinioException e) {
@@ -52,6 +62,7 @@ public class Client {
 
     /**
      * Provides access to the singleton MinIO client instance.
+     *
      * @return Singleton instance of the MinIO client.
      */
     public static Client getMinioClient() {
@@ -60,6 +71,7 @@ public class Client {
 
     /**
      * Uploads a file to the MinIO bucket.
+     *
      * @param fileData Byte array representing the file data to be uploaded.
      * @return URL of the uploaded file in the format: {minioEndpoint}/{bucketName}/{objectName}
      */
@@ -69,14 +81,14 @@ public class Client {
         try {
             this.minioClient.putObject(
                     PutObjectArgs.builder()
-                            .bucket(bucketName)
+                            .bucket(BUCKET_NAME)
                             .object(objectName)
                             .stream(new ByteArrayInputStream(fileData), (long) fileData.length,
                                     (long) -1)
                             .build()
             );
 
-            return String.format("%s/%s/%s", minioEndpoint, bucketName, objectName);
+            return String.format("%s/%s/%s", MINIO_ENDPOINT, BUCKET_NAME, objectName);
         } catch (MinioException e) {
             e.printStackTrace();
             throw new RuntimeException(e);

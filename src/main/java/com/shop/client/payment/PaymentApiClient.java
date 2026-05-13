@@ -2,13 +2,14 @@ package com.shop.client.payment;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.shop.service.VaultService;
 import com.shop.webclient.WebClient;
 
 import java.util.Map;
 
 public class PaymentApiClient {
     private final WebClient webClient = WebClient.getInstance();
-    private final String SERVER_BANK_URL = System.getenv("SERVER_BANK_URL");
+    private final String SERVER_BANK_URL = VaultService.getInstance().getSecret("SERVER_BANK_URL");
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private PaymentApiClient() {
@@ -28,7 +29,10 @@ public class PaymentApiClient {
                     "amount", amount
             ));
 
-            String responseBody = webClient.post(SERVER_BANK_URL + "/transfer", requestBody);
+            String responseBody = webClient.post(SERVER_BANK_URL + "/transfer", Map.of(
+                    "Content-Type", "application/json",
+                    "Accept", "application/json"
+            ), requestBody);
 
             var responseJson = objectMapper.readTree(responseBody);
 

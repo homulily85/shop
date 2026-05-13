@@ -6,6 +6,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Map;
 
 public class WebClient {
 
@@ -25,26 +26,27 @@ public class WebClient {
     /**
      * Sends a GET request to the specified URL.
      */
-    public String get(String url) {
-        HttpRequest request = HttpRequest.newBuilder()
+    public String get(String url, Map<String, String> headers) {
+        var builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
-                .GET()
-                .header("Accept", "application/json")
-                .build();
+                .GET();
+        headers.forEach(builder::header);
 
+        HttpRequest request = builder.build();
         return executeRequest(request);
     }
 
     /**
      * Sends a POST request to the specified URL with a JSON body.
      */
-    public String post(String url, String jsonBody) {
-        HttpRequest request = HttpRequest.newBuilder()
+    public String post(String url, Map<String, String> headers, String jsonBody) {
+        var builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
-                .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-                .header("Content-Type", "application/json")
-                .header("Accept", "application/json")
-                .build();
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody));
+
+        headers.forEach(builder::header);
+
+        var request = builder.build();
 
         return executeRequest(request);
     }

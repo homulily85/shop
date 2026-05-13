@@ -5,17 +5,19 @@ services:
       dockerfile: Dockerfile
     container_name: shop
     environment:
-      - DB_URL=jdbc:mariadb://shop-db:3306/shop
-      - DB_USERNAME=root
-      - DB_PASSWORD=root
+#      - DB_URL=jdbc:mariadb://shop-db:3306/shop
+#      - DB_USERNAME=root
+#      - DB_PASSWORD=root
+#      - REDIS_HOST=shop-redis
+#      - REDIS_PORT=6379
+#      - MINIO_ROOT_USER=admin
+#      - MINIO_ROOT_PASSWORD=12345678
+#      - MINIO_BUCKET_NAME=shop-bucket
+#      - MINIO_ENDPOINT=http://shop-minio:9000
+#      - SERVER_BANK_URL=http://bank-nginx
       - PORT=12345
-      - REDIS_HOST=shop-redis
-      - REDIS_PORT=6379
-      - MINIO_ROOT_USER=admin
-      - MINIO_ROOT_PASSWORD=12345678
-      - MINIO_BUCKET_NAME=shop-bucket
-      - MINIO_ENDPOINT=http://shop-minio:9000
-      - SERVER_BANK_URL=http://bank-nginx
+      - SERVER_VAULT_URL=http://shop-vault:8200
+      - VAULT_TOKEN=1
     depends_on:
       shop-db:
         condition: service_healthy
@@ -23,6 +25,8 @@ services:
         condition: service_started
       shop-minio:
         condition: service_started
+      shop-vault-init:
+        condition: service_completed_successfully
 
   shop-php-gateway:
     build:
@@ -82,6 +86,49 @@ services:
     command: server /data
     volumes:
       - shop_minio_data:/data
+
+  shop-vault:
+    image: hashicorp/vault
+    container_name: shop-vault
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: 1
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+      VAULT_DISABLE_MLOCK: "true"
+    entrypoint: vault
+    command: server -dev
+
+  shop-vault-init:
+    image: hashicorp/vault
+    container_name: shop-vault-init
+    environment:
+      VAULT_ADDR: http://shop-vault:8200
+      VAULT_TOKEN: 1
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        echo "[vault-init] Waiting for Vault to be ready..."
+        until vault status > /dev/null 2>&1; do
+          echo "[vault-init] Vault not ready yet, retrying in 2s..."
+          sleep 2
+        done
+        echo "[vault-init] Vault is ready. Enabling KV v2 secrets engine..."
+        vault secrets enable -path=secret kv-v2 2>/dev/null || true
+        echo "[vault-init] Writing bank secrets..."
+        vault kv put secret/shop \
+          DB_URL="jdbc:mariadb://shop-db:3306/shop" \
+          DB_USERNAME="root" \
+          DB_PASSWORD="root" \
+          REDIS_HOST="shop-redis" \
+          REDIS_PORT="6379" \
+          MINIO_ROOT_USER="admin" \
+          MINIO_ROOT_PASSWORD="12345678" \
+            MINIO_BUCKET_NAME="shop-bucket"\
+          MINIO_ENDPOINT="http://shop-minio:9000" \
+          SERVER_BANK_URL="http://bank-nginx"
+        echo "[vault-init] Secrets written successfully."
+    depends_on:
+      - shop-vault
 
 volumes:
   shop_db_data:

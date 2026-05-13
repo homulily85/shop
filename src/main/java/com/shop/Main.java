@@ -4,9 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.controller.CartController;
 import com.shop.controller.OrderController;
 import com.shop.controller.ProductController;
-import com.shop.controller.UploadController;
+import com.shop.controller.ImageStorageController;
 import com.shop.scheduler.JobScheduler;
-import com.shop.webserver.HttpResponse;
+import com.shop.webserver.HttpTextResponse;
 import com.shop.webserver.HttpServer;
 
 import java.io.IOException;
@@ -24,10 +24,10 @@ public class Main {
         server.addRoute("/test",
                 (method, queryParams, pathParams, headers, body) -> {
                     try {
-                        return new HttpResponse(200, "OK", mapper.writeValueAsString(Map.of(
+                        return new HttpTextResponse(200, "OK", mapper.writeValueAsString(Map.of(
                                 "message", "Hello World!")));
                     } catch (Exception e) {
-                        return new HttpResponse(500, "Internal Server Error", "");
+                        return new HttpTextResponse(500, "Internal Server Error", "");
                     }
                 });
 
@@ -37,8 +37,8 @@ public class Main {
         CartController cartController = new CartController(server);
         cartController.registerRoutes();
 
-        UploadController uploadController = new UploadController(server);
-        uploadController.registerRoutes();
+        ImageStorageController imageStorageController = new ImageStorageController(server);
+        imageStorageController.registerRoutes();
 
         OrderController orderController = new OrderController(server);
         orderController.registerRoutes();

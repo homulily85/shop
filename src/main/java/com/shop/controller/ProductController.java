@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.dto.ProductDTO;
 import com.shop.model.Product;
 import com.shop.service.ProductService;
-import com.shop.webserver.HttpResponse;
+import com.shop.webserver.HttpTextResponse;
 import com.shop.webserver.HttpServer;
 
 import java.util.Map;
@@ -26,7 +26,7 @@ public class ProductController extends AbstractController {
             if (method.equals("GET")) {
                 if (queryParams.containsKey("status")) {
                     var products = productService.getProductByStatus(queryParams.get("status"));
-                    return new HttpResponse(200, "OK", objectMapper.writeValueAsString(products));
+                    return new HttpTextResponse(200, "OK", objectMapper.writeValueAsString(products));
                 }
 
                 int pageNumber = 0;
@@ -70,7 +70,7 @@ public class ProductController extends AbstractController {
                         )
                 );
 
-                return new HttpResponse(200, "OK", objectMapper.writeValueAsString(responseBody));
+                return new HttpTextResponse(200, "OK", objectMapper.writeValueAsString(responseBody));
             } else if (method.equals("POST")) {
                 if (body == null || body.length == 0) {
                     throw new IllegalArgumentException("Missing JSON body");
@@ -82,11 +82,11 @@ public class ProductController extends AbstractController {
                     throw new RuntimeException("Failed to create product.");
                 }
 
-                return new HttpResponse(201, "Created",
+                return new HttpTextResponse(201, "Created",
                         objectMapper.writeValueAsString(newProduct));
             }
 
-            return new HttpResponse(405, "Method Not Allowed", "");
+            return new HttpTextResponse(405, "Method Not Allowed", "");
         });
 
         server.addRoute("/products/:id", (method, queryParams, pathParams, headers, body) -> {
@@ -94,15 +94,15 @@ public class ProductController extends AbstractController {
                 case "GET" -> {
                     var product = productService.getProductById(pathParams.get("id"));
                     if (product == null) {
-                        return new HttpResponse(404, "Not Found",
+                        return new HttpTextResponse(404, "Not Found",
                                 objectMapper.writeValueAsString(Map.of("message", "Product not " +
                                         "found.")));
                     }
-                    return new HttpResponse(200, "OK", objectMapper.writeValueAsString(product));
+                    return new HttpTextResponse(200, "OK", objectMapper.writeValueAsString(product));
                 }
                 case "DELETE" -> {
                     productService.deleteAProduct(Long.parseLong(pathParams.get("id")));
-                    return new HttpResponse(200, "OK", null);
+                    return new HttpTextResponse(200, "OK", null);
                 }
                 case "PATCH" -> {
                     if (body == null || body.length == 0) {
@@ -111,7 +111,7 @@ public class ProductController extends AbstractController {
 
                     var existingProduct = productService.getProductById(pathParams.get("id"));
                     if (existingProduct == null) {
-                        return new HttpResponse(404, "Not Found",
+                        return new HttpTextResponse(404, "Not Found",
                                 objectMapper.writeValueAsString(Map.of("message", "Product not " +
                                         "found.")));
                     }
@@ -148,11 +148,11 @@ public class ProductController extends AbstractController {
                     if (updatedProduct == null) {
                         throw new RuntimeException("Failed to update product.");
                     }
-                    return new HttpResponse(200, "OK",
+                    return new HttpTextResponse(200, "OK",
                             objectMapper.writeValueAsString(updatedProduct));
                 }
                 default -> {
-                    return new HttpResponse(405, "Method Not Allowed", null);
+                    return new HttpTextResponse(405, "Method Not Allowed", null);
                 }
             }
         });

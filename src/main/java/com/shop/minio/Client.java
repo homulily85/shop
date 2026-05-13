@@ -1,16 +1,14 @@
 package com.shop.minio;
 
 import com.shop.service.VaultService;
-import io.minio.BucketExistsArgs;
-import io.minio.MakeBucketArgs;
-import io.minio.MinioClient;
-import io.minio.PutObjectArgs;
+import io.minio.*;
 import io.minio.errors.MinioException;
 import org.apache.tika.Tika;
 import org.apache.tika.mime.MimeType;
 import org.apache.tika.mime.MimeTypes;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 
 /**
  * Wrapper for MinIO client that handles bucket creation and file uploads.
@@ -112,6 +110,30 @@ public class Client {
         } catch (MinioException e) {
             e.printStackTrace();
             throw new RuntimeException("Error occurred while uploading to MinIO", e);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Retrieves a file from the MinIO bucket as an InputStream.
+     *
+     * @param objectName The exact name of the file on the MinIO server.
+     * @return InputStream of the file.
+     * @throws RuntimeException if the file cannot be retrieved.
+     */
+    public InputStream getFileStream(String objectName) {
+        try {
+            return this.minioClient.getObject(
+                    GetObjectArgs.builder()
+                            .bucket(BUCKET_NAME)
+                            .object(objectName)
+                            .build()
+            );
+        } catch (MinioException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error occurred while retrieving file from MinIO: " + objectName, e);
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException(e);

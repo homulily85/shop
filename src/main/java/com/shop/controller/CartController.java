@@ -3,7 +3,7 @@ package com.shop.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.dto.CartItemDTO;
 import com.shop.service.CartService;
-import com.shop.webserver.HttpResponse;
+import com.shop.webserver.HttpTextResponse;
 import com.shop.webserver.HttpServer;
 
 public class CartController extends AbstractController {
@@ -23,9 +23,9 @@ public class CartController extends AbstractController {
                 case "GET" -> {
                     var cartItems = cartService.getCart(pathParams.get("id"));
                     if (cartItems == null) {
-                        return new HttpResponse(200, "OK", null);
+                        return new HttpTextResponse(200, "OK", null);
                     }
-                    return new HttpResponse(200, "OK", objectMapper.writeValueAsString(cartItems));
+                    return new HttpTextResponse(200, "OK", objectMapper.writeValueAsString(cartItems));
                 }
 
                 case "POST" -> {
@@ -36,7 +36,7 @@ public class CartController extends AbstractController {
                     cartService.updateCart(pathParams.get("id"), cartItemDTO.productId(),
                             cartItemDTO.quantity());
 
-                    return new HttpResponse(200, "OK", null);
+                    return new HttpTextResponse(200, "OK", null);
                 }
 
                 case "DELETE" -> {
@@ -47,11 +47,11 @@ public class CartController extends AbstractController {
                     long productId = jsonNode.get("productId").asLong();
                     cartService.removeItem(pathParams.get("id"), productId);
 
-                    return new HttpResponse(200, "OK", null);
+                    return new HttpTextResponse(200, "OK", null);
                 }
 
                 default -> {
-                    return new HttpResponse(405, "Method Not Allowed", null);
+                    return new HttpTextResponse(405, "Method Not Allowed", null);
                 }
             }
         });

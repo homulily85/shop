@@ -81,7 +81,7 @@ public class OrderService {
     public void cleanPendingOrders() {
         var pendingOrders = orderRepository.getOrderByStatus("PENDING");
         for (var order : pendingOrders) {
-            if (order.updatedAt().isBefore(LocalDateTime.now().minusMinutes(15))) {
+            if (LocalDateTime.parse(order.updatedAt()).isBefore(LocalDateTime.now().minusMinutes(15))) {
                 System.out.println("[OrderService] Cleaning up pending order ID: " + order.id());
                 orderRepository.markOrderFailedAndRestoreStock(order.id(), order.items());
             }

@@ -106,8 +106,8 @@ public class OrderRepository {
                                 LocalDateTime.of(rs.getDate(ORDER_UPDATED_AT).toLocalDate(),
                                         rs.getTime(ORDER_UPDATED_AT).toLocalTime());
 
-                        order = new Order(orderId, customerId, totalAmount, status, billId, items
-                                , updatedAt);
+                        order = new Order(orderId, customerId, totalAmount, status, billId, items,
+                                updatedAt.toString());
                     }
 
                     long productId = rs.getLong(ITEM_PRODUCT_ID);
@@ -187,7 +187,7 @@ public class OrderRepository {
                         }
 
                         order = new Order(orderId, customerId, totalAmount, orderStatus, billId,
-                                new ArrayList<>(), updatedAt);
+                                new ArrayList<>(), updatedAt.toString());
                         orderMap.put(orderId, order);
                     }
 
@@ -264,24 +264,6 @@ public class OrderRepository {
                     throw new RuntimeException("Insufficient stock for product ID: " + failedItem.product().id());
                 }
             }
-        }
-    }
-
-    private void addProductStock(List<OrderItem> items) throws SQLException {
-        String sql =
-                "UPDATE " + PRODUCT_TABLE_NAME +
-                        " SET " + PRODUCT_QUANTITY + " = " + PRODUCT_QUANTITY + " + ?" +
-                        " WHERE " + PRODUCT_ID + " = ?";
-
-        try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement stmt = connection.prepareStatement(sql)) {
-            for (OrderItem item : items) {
-                stmt.setLong(1, item.orderedQuantity());
-                stmt.setLong(2, item.product().id());
-
-                stmt.addBatch();
-            }
-            stmt.executeBatch();
         }
     }
 

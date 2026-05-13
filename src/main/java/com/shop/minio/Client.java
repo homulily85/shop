@@ -6,6 +6,9 @@ import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.errors.MinioException;
+import org.apache.tika.Tika;
+import org.apache.tika.mime.MimeType;
+import org.apache.tika.mime.MimeTypes;
 
 import java.io.ByteArrayInputStream;
 
@@ -73,10 +76,20 @@ public class Client {
      * Uploads a file to the MinIO bucket.
      *
      * @param fileData Byte array representing the file data to be uploaded.
-     * @return URL of the uploaded file in the format: {minioEndpoint}/{bucketName}/{objectName}
+     * @return The name of newly uploaded file on server.
      */
     public String upload(byte[] fileData) {
-        String objectName = "upload_" + System.currentTimeMillis();
+        Tika tika = new Tika();
+        String mimeTypeString = tika.detect(fileData);
+
+        String extension;
+        try {
+            MimeType mimeType = MimeTypes.getDefaultMimeTypes().forName(mimeTypeString);
+            extension = mimeType.getExtension();
+        } catch (Exception e) {
+            extension = ".bin";
+        }
+        String objectName = System.currentTimeMillis() + extension;
 
         try {
             this.minioClient.putObject(
@@ -88,7 +101,7 @@ public class Client {
                             .build()
             );
 
-            return String.format("%s/%s/%s", MINIO_ENDPOINT, BUCKET_NAME, objectName);
+            return String.format(objectName);
         } catch (MinioException e) {
             e.printStackTrace();
             throw new RuntimeException(e);

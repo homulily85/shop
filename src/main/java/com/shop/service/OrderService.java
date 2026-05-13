@@ -29,12 +29,11 @@ public class OrderService {
             throw new IllegalArgumentException("Cart is empty!");
         }
 
-        long totalAmount =
-                cart.items().stream().mapToLong(item -> item.product().price() * item.orderedQuantity())
-                        .sum();
+        long totalAmount = cart.items().stream().mapToLong(item -> item.product().price() * item.orderedQuantity())
+                .sum();
 
-        var newOderId =
-                orderRepository.createPendingOrderTransaction(new OrderDTO(Long.parseLong(customerId), totalAmount, cart.items()));
+        var newOderId = orderRepository
+                .createPendingOrderTransaction(new OrderDTO(Long.parseLong(customerId), totalAmount, cart.items()));
 
         long returnedTransactionId;
         try {

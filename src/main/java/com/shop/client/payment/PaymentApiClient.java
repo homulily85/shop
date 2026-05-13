@@ -32,10 +32,6 @@ public class PaymentApiClient {
 
             var responseJson = objectMapper.readTree(responseBody);
 
-            if (responseJson.has("message") && "INSUFFICIENT_BALANCE".equals(responseJson.get("message").asText())) {
-                throw new IllegalArgumentException("INSUFFICIENT_BALANCE");
-            }
-
             return responseJson.get("data").get("transactions").asLong();
         } catch (JsonProcessingException e) {
             e.printStackTrace();
@@ -43,9 +39,12 @@ public class PaymentApiClient {
         } catch (RuntimeException e) {
             if (e.getMessage() != null && e.getMessage().contains("INSUFFICIENT_BALANCE")) {
                 throw new IllegalArgumentException("INSUFFICIENT_BALANCE");
+            } else if (e.getMessage() != null && e.getMessage().contains("ACCOUNT_NOT_FOUND")) {
+                throw new IllegalArgumentException("ACCOUNT_NOT_FOUND");
+            } else {
+                System.err.println("Payment gateway request failed: " + e.getMessage());
             }
 
-            System.err.println("Payment gateway request failed: " + e.getMessage());
             return -1;
         }
     }

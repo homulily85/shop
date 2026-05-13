@@ -43,8 +43,12 @@ public class OrderService {
             if ("INSUFFICIENT_BALANCE".equals(e.getMessage())) {
                 orderRepository.markOrderFailedAndRestoreStock(newOderId, cart.items());
                 throw new IllegalArgumentException("Payment failed: Insufficient balance.");
+            } else if ("ACCOUNT_NOT_FOUND".equals(e.getMessage())) {
+                orderRepository.markOrderFailedAndRestoreStock(newOderId, cart.items());
+                throw new IllegalArgumentException("Payment failed: Account not found.");
+            } else {
+                throw e;
             }
-            throw e;
         }
 
         if (returnedTransactionId < 0) {

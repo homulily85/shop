@@ -97,6 +97,11 @@ public class CartRepository {
                     }
 
                     long productId = rs.getLong(ITEM_PRODUCT_ID);
+
+                    if (rs.wasNull()) {
+                        continue;
+                    }
+
                     String productTitle = rs.getString(PRODUCT_TITLE);
                     long productPrice = rs.getLong(PRODUCT_PRICE);
                     String productDescription = rs.getString(PRODUCT_DESCRIPTION);

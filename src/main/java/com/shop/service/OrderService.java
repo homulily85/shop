@@ -80,7 +80,6 @@ public class OrderService {
 
     public void cleanPendingOrders() {
         var pendingOrders = orderRepository.getOrderByStatus("PENDING");
-        System.out.println(pendingOrders);
         for (var order : pendingOrders) {
             if (order.updatedAt().isBefore(LocalDateTime.now().minusMinutes(15))) {
                 System.out.println("[OrderService] Cleaning up pending order ID: " + order.id());

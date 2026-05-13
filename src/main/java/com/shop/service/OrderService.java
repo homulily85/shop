@@ -29,11 +29,13 @@ public class OrderService {
             throw new IllegalArgumentException("Cart is empty!");
         }
 
-        long totalAmount = cart.items().stream().mapToLong(item -> item.product().price() * item.orderedQuantity())
+        long totalAmount =
+                cart.items().stream().mapToLong(item -> item.product().price() * item.orderedQuantity())
                 .sum();
 
         var newOderId = orderRepository
-                .createPendingOrderTransaction(new OrderDTO(Long.parseLong(customerId), totalAmount, cart.items()));
+                .createPendingOrderTransaction(new OrderDTO(Long.parseLong(customerId),
+                        totalAmount, cart.items()));
 
         long returnedTransactionId;
         try {
@@ -68,6 +70,10 @@ public class OrderService {
         var order = orderRepository.getOrderById(orderIdLong);
         if (order == null) {
             throw new IllegalArgumentException("Order not found for ID: " + orderId);
+        }
+
+        if (!order.status().equals("PENDING")) {
+            return;
         }
 
         if (success) {

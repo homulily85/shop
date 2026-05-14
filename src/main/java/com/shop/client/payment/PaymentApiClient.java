@@ -3,8 +3,10 @@ package com.shop.client.payment;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.service.VaultService;
+import com.shop.util.HmacUtil;
 import com.shop.webclient.WebClient;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class PaymentApiClient {
@@ -29,10 +31,17 @@ public class PaymentApiClient {
                     "amount", amount
             ));
 
-            String responseBody = webClient.post(SERVER_BANK_URL + "/transfer", Map.of(
-                    "Content-Type", "application/json",
-                    "Accept", "application/json"
-            ), requestBody);
+            // Sign the request with HMAC for inter-service authentication
+            String timestamp = String.valueOf(System.currentTimeMillis());
+            String signature = HmacUtil.sign(timestamp, requestBody);
+
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Content-Type", "application/json");
+            headers.put("Accept", "application/json");
+            headers.put("X-Internal-Signature", signature);
+            headers.put("X-Internal-Timestamp", timestamp);
+
+            String responseBody = webClient.post(SERVER_BANK_URL + "/transfer", headers, requestBody);
 
             var responseJson = objectMapper.readTree(responseBody);
 

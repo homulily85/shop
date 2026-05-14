@@ -38,6 +38,7 @@ services:
       - JAVA_HOST=shop
       - JAVA_PORT=12345
       - INTERNAL_API_SECRET=b8f2a9c1-4e3d-4a7b-9f1e-6d5c8a2b3e4f
+      - KONG_API_KEY=d4f8e2a1-7b3c-4f9e-a6d5-8c1b2e3f4a5d
     depends_on:
       shop:
         condition: service_started

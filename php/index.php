@@ -15,10 +15,11 @@ $headers = function_exists('getallheaders') ? getallheaders() : [];
 
 $rawBody = file_get_contents('php://input');
 
-// === Inter-service HMAC authentication ===
 $signature = $headers['X-Internal-Signature'] ?? null;
 $timestamp = $headers['X-Internal-Timestamp'] ?? null;
+$kongApiKey = $headers['X-Kong-Api-Key'] ?? null;
 $isInternalCall = ($signature !== null && $timestamp !== null);
+$isKongCall = false;
 
 if ($isInternalCall) {
     $secret = getenv('INTERNAL_API_SECRET');
@@ -46,6 +47,21 @@ if ($isInternalCall) {
     }
 
     error_log("[HMAC] Validated inter-service request: $method $uri");
+}
+
+if (!$isInternalCall) {
+    $expectedKongKey = getenv('KONG_API_KEY');
+    if ($expectedKongKey && $kongApiKey === $expectedKongKey) {
+        $isKongCall = true;
+    }
+}
+
+// Reject unauthenticated requests
+if (!$isInternalCall && !$isKongCall) {
+    http_response_code(403);
+    error_log("[AUTH] Denied unauthenticated request: $method $uri");
+    echo json_encode(["error" => "Forbidden"]);
+    exit;
 }
 
 $request = [

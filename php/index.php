@@ -12,7 +12,9 @@ $rawBody = file_get_contents('php://input');
 
 $signature = $headers['X-Internal-Signature'] ?? null;
 $timestamp = $headers['X-Internal-Timestamp'] ?? null;
+$kongApiKey = $headers['X-Kong-Api-Key'] ?? null;
 $isInternalCall = ($signature !== null && $timestamp !== null);
+$isKongCall = false;
 
 if ($isInternalCall) {
     $secret = getenv('INTERNAL_API_SECRET');
@@ -53,45 +55,57 @@ if (preg_match('#^/bill/([^/]+)/payment-result/?$#', $path)) {
 }
 
 if (!$isInternalCall) {
-    $userId = null;
-    $userRole = null;
-    foreach ($headers as $key => $value) {
-        $lowerKey = strtolower($key);
-        if ($lowerKey === 'x-user-id') {
-            $userId = $value;
-        } elseif ($lowerKey === 'x-user-role') {
-            $userRole = strtoupper($value);
-        }
+    $expectedKongKey = getenv('KONG_API_KEY');
+    if ($expectedKongKey && $kongApiKey === $expectedKongKey) {
+        $isKongCall = true;
     }
-
-    // Check Cart / Checkout permissions
-    if (preg_match('#^/(cart|checkout)/([^/]+)#', $path, $matches)) {
-        $requestedId = $matches[2];
-
-        if ($userId !== $requestedId) {
-            http_response_code(403);
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(["error" => "Forbidden: You are not authorized to access this resource."]);
-            exit;
-        }
-    }
-
-    // Check Product Admin permissions
-    $isProductRoot = preg_match('#^/products/?$#', $path);
-    $isProductWithId = preg_match('#^/products/([^/]+)$#', $path);
-
-    if (($method === 'POST' && $isProductRoot) ||
-        (in_array($method, ['PATCH', 'DELETE']) && $isProductWithId)) {
-
-        if ($userRole !== 'ADMIN') {
-            http_response_code(403);
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(["error" => "Forbidden: You do not have the required admin privileges."]);
-            exit;
-        }
-    }
-
 }
+
+if (!$isInternalCall && !$isKongCall) {
+    http_response_code(403);
+    error_log("[AUTH] Denied unauthenticated request: $method $uri");
+    echo json_encode(["status" => "ERROR", "message" => "Forbidden"]);
+    exit;
+}
+
+$userId = null;
+$userRole = null;
+foreach ($headers as $key => $value) {
+    $lowerKey = strtolower($key);
+    if ($lowerKey === 'x-user-id') {
+        $userId = $value;
+    } elseif ($lowerKey === 'x-user-role') {
+        $userRole = strtoupper($value);
+    }
+}
+
+// Check Cart / Checkout permissions
+if (preg_match('#^/(cart|checkout)/([^/]+)#', $path, $matches)) {
+    $requestedId = $matches[2];
+
+    if ($userId !== $requestedId) {
+        http_response_code(403);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(["error" => "Forbidden: You are not authorized to access this resource."]);
+        exit;
+    }
+}
+
+// Check Product Admin permissions
+$isProductRoot = preg_match('#^/products/?$#', $path);
+$isProductWithId = preg_match('#^/products/([^/]+)$#', $path);
+
+if (($method === 'POST' && $isProductRoot) ||
+    (in_array($method, ['PATCH', 'DELETE']) && $isProductWithId)) {
+
+    if ($userRole !== 'ADMIN') {
+        http_response_code(403);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(["error" => "Forbidden: You do not have the required admin privileges."]);
+        exit;
+    }
+}
+
 
 $headersForBackend = empty($headers) ? new stdClass() : $headers;
 

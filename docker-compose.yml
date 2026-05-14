@@ -5,20 +5,10 @@ services:
       dockerfile: Dockerfile
     container_name: shop
     environment:
-#      - DB_URL=jdbc:mariadb://shop-db:3306/shop
-#      - DB_USERNAME=root
-#      - DB_PASSWORD=root
-#      - REDIS_HOST=shop-redis
-#      - REDIS_PORT=6379
-#      - MINIO_ROOT_USER=admin
-#      - MINIO_ROOT_PASSWORD=12345678
-#      - MINIO_BUCKET_NAME=shop-bucket
-#      - MINIO_ENDPOINT=http://shop-minio:9000
-#      - SERVER_BANK_URL=http://bank-nginx
       - PORT=12345
       - SERVER_VAULT_URL=http://shop-vault:8200
       - VAULT_TOKEN=1
-      - INTERNAL_API_SECRET=b8f2a9c1-4e3d-4a7b-9f1e-6d5c8a2b3e4f
+      - KONG_API_KEY=d4f8e2a1-7b3c-4f9e-a6d5-8c1b2e3f4a5d
     depends_on:
       shop-db:
         condition: service_healthy

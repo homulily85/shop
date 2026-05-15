@@ -31,26 +31,46 @@ public class OrderService {
 
         long totalAmount =
                 cart.items().stream().mapToLong(item -> item.product().price() * item.orderedQuantity())
-                .sum();
+                        .sum();
 
         var newOderId = orderRepository
                 .createPendingOrderTransaction(new OrderDTO(Long.parseLong(customerId),
                         totalAmount, cart.items()));
 
-        long returnedTransactionId;
-        try {
-            returnedTransactionId = paymentApiClient.makePayment(newOderId,
-                    Long.parseLong(customerId),
-                    totalAmount);
-        } catch (IllegalArgumentException e) {
-            if ("INSUFFICIENT_BALANCE".equals(e.getMessage())) {
-                orderRepository.markOrderFailedAndRestoreStock(newOderId, cart.items());
-                throw new IllegalArgumentException("Payment failed: Insufficient balance.");
-            } else if ("ACCOUNT_NOT_FOUND".equals(e.getMessage())) {
-                orderRepository.markOrderFailedAndRestoreStock(newOderId, cart.items());
-                throw new IllegalArgumentException("Payment failed: Account not found.");
-            } else {
-                throw e;
+        long returnedTransactionId = -1;
+        int maxRetries = 3;
+        int attempts = 0;
+
+        while (attempts < maxRetries) {
+            try {
+                returnedTransactionId = paymentApiClient.makePayment(newOderId,
+                        Long.parseLong(customerId),
+                        totalAmount);
+
+                if (returnedTransactionId >= 0) {
+                    break;
+                }
+            } catch (IllegalArgumentException e) {
+                if ("INSUFFICIENT_BALANCE".equals(e.getMessage())) {
+                    orderRepository.markOrderFailedAndRestoreStock(newOderId, cart.items());
+                    throw new IllegalArgumentException("Payment failed: Insufficient balance.");
+                } else if ("ACCOUNT_NOT_FOUND".equals(e.getMessage())) {
+                    orderRepository.markOrderFailedAndRestoreStock(newOderId, cart.items());
+                    throw new IllegalArgumentException("Payment failed: Account not found.");
+                } else {
+                    throw e;
+                }
+            }
+
+            attempts++;
+            if (attempts < maxRetries) {
+                System.out.println("[OrderService] Payment gateway unavailable. Retrying... Attempt " + attempts + " of " + maxRetries);
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
             }
         }
 

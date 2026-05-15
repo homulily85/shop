@@ -27,7 +27,7 @@ public class PaymentApiClient {
             String requestBody = objectMapper.writeValueAsString(Map.of(
                     "billId", orderId,
                     "senderId", customerId,
-                    "receiverId", 4,
+                    "receiverId", 2,
                     "amount", amount
             ));
 
@@ -40,6 +40,8 @@ public class PaymentApiClient {
             headers.put("Accept", "application/json");
             headers.put("X-Internal-Signature", signature);
             headers.put("X-Internal-Timestamp", timestamp);
+            headers.put("X-User-Id", String.valueOf(customerId));
+            headers.put("X-User-Role", "USER");
 
             String responseBody = webClient.post(SERVER_BANK_URL + "/transfer", headers, requestBody);
 

@@ -32,21 +32,39 @@ public class ProductController extends AbstractController {
                 int pageNumber = 0;
                 int pageSize = 10;
 
-                try {
-                    pageNumber = Integer.parseInt(queryParams.getOrDefault("pageNumber", "0"));
-                } catch (NumberFormatException ignored) {
+                if (queryParams.containsKey("pageNumber")) {
+                    try {
+                        pageNumber = Integer.parseInt(queryParams.get("pageNumber"));
+                    } catch (NumberFormatException e) {
+                        return errorResponse(400, "Bad Request", "Invalid pageNumber");
+                    }
                 }
 
-                try {
-                    pageSize = Integer.parseInt(queryParams.getOrDefault("pageSize", "10"));
-                } catch (NumberFormatException ignored) {
+                if (queryParams.containsKey("pageSize")) {
+                    try {
+                        pageSize = Integer.parseInt(queryParams.get("pageSize"));
+                    } catch (NumberFormatException e) {
+                        return errorResponse(400, "Bad Request", "Invalid pageSize");
+                    }
                 }
 
-                if (pageNumber < 0) pageNumber = 0;
-                if (pageSize <= 0) pageSize = 10;
+                if (pageNumber < 0) {
+                    return errorResponse(400, "Bad Request", "pageNumber must be >= 0");
+                }
+                if (pageSize <= 0) {
+                    return errorResponse(400, "Bad Request", "pageSize must be > 0");
+                }
 
                 String sortBy = queryParams.getOrDefault("sortBy", "id");
                 String sortOrder = queryParams.getOrDefault("sortOrder", "asc");
+
+                if (sortBy.isBlank()) {
+                    return errorResponse(400, "Bad Request", "sortBy must not be blank");
+                }
+
+                if (!sortOrder.equalsIgnoreCase("asc") && !sortOrder.equalsIgnoreCase("desc")) {
+                    return errorResponse(400, "Bad Request", "sortOrder must be 'asc' or 'desc'");
+                }
 
                 var products = productService.getAllProducts(pageNumber, pageSize, sortBy,
                         sortOrder);
@@ -86,7 +104,7 @@ public class ProductController extends AbstractController {
                         objectMapper.writeValueAsString(newProduct));
             }
 
-            return new HttpTextResponse(405, "Method Not Allowed", "");
+            return errorResponse(405, "Method Not Allowed", "Method not allowed");
         });
 
         server.addRoute("/products/:id", (method, queryParams, pathParams, headers, body) -> {
@@ -94,9 +112,7 @@ public class ProductController extends AbstractController {
                 case "GET" -> {
                     var product = productService.getProductById(pathParams.get("id"));
                     if (product == null) {
-                        return new HttpTextResponse(404, "Not Found",
-                                objectMapper.writeValueAsString(Map.of("message", "Product not " +
-                                        "found.")));
+                        return errorResponse(404, "Not Found", "Product not found");
                     }
                     return new HttpTextResponse(200, "OK", objectMapper.writeValueAsString(product));
                 }
@@ -133,6 +149,22 @@ public class ProductController extends AbstractController {
                     String updatedImageLink = jsonNode.has("imageLink") ? jsonNode.get("imageLink"
                     ).asText() : existingProduct.imageLink();
 
+                        if (jsonNode.has("title") && updatedTitle.isBlank()) {
+                        throw new IllegalArgumentException("title must not be blank");
+                        }
+                        if (jsonNode.has("price") && updatedPrice < 0) {
+                        throw new IllegalArgumentException("price must be >= 0");
+                        }
+                        if (jsonNode.has("availableQuantity") && updatedQuantity < 0) {
+                        throw new IllegalArgumentException("availableQuantity must be >= 0");
+                        }
+                        if (jsonNode.has("category") && updatedCategory.isBlank()) {
+                        throw new IllegalArgumentException("category must not be blank");
+                        }
+                        if (jsonNode.has("status") && updatedStatus.isBlank()) {
+                        throw new IllegalArgumentException("status must not be blank");
+                        }
+
                     var productTobeUpdatedWithId = new Product(
                             existingProduct.id(),
                             updatedTitle,
@@ -152,9 +184,15 @@ public class ProductController extends AbstractController {
                             objectMapper.writeValueAsString(updatedProduct));
                 }
                 default -> {
-                    return new HttpTextResponse(405, "Method Not Allowed", null);
+                    return errorResponse(405, "Method Not Allowed", "Method not allowed");
                 }
             }
         });
+    }
+
+    private HttpTextResponse errorResponse(int statusCode, String statusMessage, String error)
+            throws Exception {
+        return new HttpTextResponse(statusCode, statusMessage,
+                objectMapper.writeValueAsString(Map.of("error", error)));
     }
 }

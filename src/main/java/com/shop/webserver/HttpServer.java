@@ -35,12 +35,12 @@ public class HttpServer {
         ObjectMapper mapper = new ObjectMapper();
 
         if (handler != null) {
-            byte[] decodedBody = new byte[0];
-            if (httpRequest.body() != null && !httpRequest.body().isBlank()) {
-                decodedBody = Base64.getDecoder().decode(httpRequest.body());
-            }
-
             try {
+                byte[] decodedBody = new byte[0];
+                if (httpRequest.body() != null && !httpRequest.body().isBlank()) {
+                    decodedBody = Base64.getDecoder().decode(httpRequest.body());
+                }
+
                 return handler.handle(httpRequest.method(),
                         httpRequest.query(),
                         pathParams,
@@ -48,32 +48,25 @@ public class HttpServer {
                         decodedBody);
 
             } catch (IllegalArgumentException | JsonProcessingException e) {
-                try {
-                    String errorMsg = e.getMessage() != null ? e.getMessage() : "Invalid request " +
-                                                                                "data";
-                    return new HttpTextResponse(400, "Bad Request",
-                            mapper.writeValueAsString(Map.of("error", errorMsg)));
-                } catch (Exception ex) {
-                    return new HttpTextResponse(400, "Bad Request", "");
-                }
+                String errorMsg = e.getMessage() != null ? e.getMessage() : "Invalid request data";
+                return errorResponse(400, "Bad Request", errorMsg, mapper);
             } catch (Exception e) {
                 e.printStackTrace();
-                try {
-                    String errorMsg = e.getMessage() != null ? e.getMessage() : "Internal Server " +
-                                                                                "Error";
-                    return new HttpTextResponse(500, "Internal Server Error",
-                            mapper.writeValueAsString(Map.of("error", errorMsg)));
-                } catch (Exception ex) {
-                    return new HttpTextResponse(500, "Internal Server Error", "");
-                }
+                String errorMsg = e.getMessage() != null ? e.getMessage() : "Internal Server Error";
+                return errorResponse(500, "Internal Server Error", errorMsg, mapper);
             }
         } else {
-            try {
-                return new HttpTextResponse(404, "Not Found",
-                        mapper.writeValueAsString(Map.of("message", "Route not found.")));
-            } catch (Exception e) {
-                return new HttpTextResponse(404, "Not Found", "");
-            }
+            return errorResponse(404, "Not Found", "Route not found.", mapper);
+        }
+    }
+
+    private HttpTextResponse errorResponse(int statusCode, String statusMessage, String error,
+                                           ObjectMapper mapper) {
+        try {
+            return new HttpTextResponse(statusCode, statusMessage,
+                    mapper.writeValueAsString(Map.of("error", error)));
+        } catch (Exception e) {
+            return new HttpTextResponse(statusCode, statusMessage, "");
         }
     }
 
@@ -179,15 +172,21 @@ public class HttpServer {
 
             ObjectMapper objectMapper = new ObjectMapper();
 
-            HttpRequest httpRequest = objectMapper.readValue(requestLine, HttpRequest.class);
-
-            HttpResponse responseData = dispatch(httpRequest);
+            HttpResponse responseData;
+            try {
+                HttpRequest httpRequest = objectMapper.readValue(requestLine, HttpRequest.class);
+                responseData = dispatch(httpRequest);
+            } catch (Exception e) {
+                responseData = errorResponse(400, "Bad Request",
+                        e.getMessage() != null ? e.getMessage() : "Invalid request data",
+                        objectMapper);
+            }
 
             String httpResponseString = objectMapper.writeValueAsString(responseData);
 
             out.write(httpResponseString);
             out.flush();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

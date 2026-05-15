@@ -19,9 +19,14 @@ public class CartController extends AbstractController {
     @Override
     public void registerRoutes() {
         server.addRoute("/cart/:id", (method, queryParams, pathParams, headers, body) -> {
+            String cartId = pathParams.get("id");
+            if (cartId == null || cartId.isBlank()) {
+                return errorResponse(400, "Bad Request", "Missing cart id");
+            }
+
             switch (method) {
                 case "GET" -> {
-                    var cartItems = cartService.getCart(pathParams.get("id"));
+                    var cartItems = cartService.getCart(cartId);
                     if (cartItems == null) {
                         return new HttpTextResponse(200, "OK", null);
                     }
@@ -33,8 +38,10 @@ public class CartController extends AbstractController {
                         throw new IllegalArgumentException("Missing JSON body");
                     }
                     CartItemDTO cartItemDTO = objectMapper.readValue(body, CartItemDTO.class);
-                    cartService.updateCart(pathParams.get("id"), cartItemDTO.productId(),
-                            cartItemDTO.quantity());
+                    if (cartItemDTO.productId() <= 0 || cartItemDTO.quantity() <= 0) {
+                        throw new IllegalArgumentException("Invalid productId or quantity");
+                    }
+                    cartService.updateCart(cartId, cartItemDTO.productId(), cartItemDTO.quantity());
 
                     return new HttpTextResponse(200, "OK", null);
                 }
@@ -44,16 +51,28 @@ public class CartController extends AbstractController {
                         throw new IllegalArgumentException("Missing JSON body");
                     }
                     var jsonNode = objectMapper.readTree(body);
+                    if (!jsonNode.has("productId")) {
+                        throw new IllegalArgumentException("Missing productId in request body");
+                    }
                     long productId = jsonNode.get("productId").asLong();
-                    cartService.removeItem(pathParams.get("id"), productId);
+                    if (productId <= 0) {
+                        throw new IllegalArgumentException("Invalid productId");
+                    }
+                    cartService.removeItem(cartId, productId);
 
                     return new HttpTextResponse(200, "OK", null);
                 }
 
                 default -> {
-                    return new HttpTextResponse(405, "Method Not Allowed", null);
+                    return errorResponse(405, "Method Not Allowed", "Method not allowed");
                 }
             }
         });
+    }
+
+    private HttpTextResponse errorResponse(int statusCode, String statusMessage, String error)
+            throws Exception {
+        return new HttpTextResponse(statusCode, statusMessage,
+                objectMapper.writeValueAsString(java.util.Map.of("error", error)));
     }
 }

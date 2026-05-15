@@ -22,7 +22,7 @@ public class ImageStorageController extends AbstractController {
     public void registerRoutes() {
         server.addRoute("/images", ((method, queryParams, pathParams, headers, body) -> {
             if (!"POST".equalsIgnoreCase(method)) {
-                return new HttpTextResponse(405, "Method Not Allowed", null);
+                return errorResponse(405, "Method Not Allowed", "Method not allowed");
             }
 
             if (body == null || body.length == 0) {
@@ -37,12 +37,12 @@ public class ImageStorageController extends AbstractController {
 
         server.addRoute("/images/:fileName", ((method, queryParams, pathParams, headers, body) -> {
             if (!"GET".equalsIgnoreCase(method)) {
-                return new HttpTextResponse(405, "Method Not Allowed", null);
+                return errorResponse(405, "Method Not Allowed", "Method not allowed");
             }
 
             String fileName = pathParams.get("fileName");
             if (fileName == null || fileName.isEmpty()) {
-                return new HttpTextResponse(400, "Bad Request: Missing 'name' parameter", null);
+                return errorResponse(400, "Bad Request", "Missing fileName parameter");
             }
 
             try {
@@ -54,7 +54,9 @@ public class ImageStorageController extends AbstractController {
                         fileBytes);
 
             } catch (Exception e) {
-                return new HttpTextResponse(500, "Internal Server Error", null);
+                e.printStackTrace();
+                return errorResponse(500, "Internal Server Error",
+                        e.getMessage() != null ? e.getMessage() : "Failed to read file");
             }
         }));
 
@@ -65,5 +67,11 @@ public class ImageStorageController extends AbstractController {
         if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) return "image/jpeg";
         if (fileName.endsWith(".gif")) return "image/gif";
         return "application/octet-stream";
+    }
+
+    private HttpTextResponse errorResponse(int statusCode, String statusMessage, String error)
+            throws Exception {
+        return new HttpTextResponse(statusCode, statusMessage,
+                objectMapper.writeValueAsString(Map.of("error", error)));
     }
 }

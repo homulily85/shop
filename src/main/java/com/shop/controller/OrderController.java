@@ -22,6 +22,7 @@ public class OrderController extends AbstractController {
         server.addRoute("/orders/:id", ((method, queryParams, pathParams, headers, body) -> {
             String orderId = pathParams.get("id");
             String customerId = headers.get("X-User-Id");
+            String role = headers.get("X-User-Role");
 
             if (customerId == null || customerId.isBlank()) {
                 return errorResponse(401, "Unauthorized", "Missing user id");
@@ -40,7 +41,7 @@ public class OrderController extends AbstractController {
                 return errorResponse(404, "Not Found", "Order not found");
             }
 
-            if (order.customerId() != Long.parseLong(customerId)) {
+            if (!role.equals("ADMIN") && order.customerId() != Long.parseLong(customerId)) {
                 return errorResponse(403, "Forbidden", "You do not have access to this order");
             }
 

@@ -1,6 +1,51 @@
 <?php
 
-require_once "config.php";
+function rate_limit($redis, $limit = 100, $window = 60): bool
+{
+    $ip = $_SERVER['REMOTE_ADDR'];
+    $key = "rate_limit:" . $ip;
+
+    $current = $redis->incr($key);
+
+    if ($current == 1) {
+        $redis->expire($key, $window);
+    }
+
+    if ($current > $limit) {
+        return false;
+    }
+
+    return true;
+}
+
+
+function call_java($data)
+{
+    $socket = @fsockopen(JAVA_HOST, JAVA_PORT, $errno, $errstr, 5);
+
+    if (!$socket) {
+        return json_encode([
+            "status" => "ERROR",
+            "message" => "Cannot connect to Java shop server at " . JAVA_HOST . ":" . JAVA_PORT,
+            "debug_error" => $errstr
+        ]);
+    }
+
+    fwrite($socket, json_encode($data) . "\n");
+    $response = fgets($socket);
+    fclose($socket);
+
+    return $response;
+}
+
+$host = getenv('JAVA_HOST');
+$port = (int)getenv('JAVA_PORT');
+
+define('JAVA_HOST', $host);
+define('JAVA_PORT', $port);
+
+$redis = new Redis();
+$redis->connect(getenv('REDIS_HOST') ?: '127.0.0.1', (int) getenv('REDIS_PORT') ?: 6379);
 
 $method = $_SERVER["REQUEST_METHOD"];
 $uri = $_SERVER['REQUEST_URI'];
@@ -54,6 +99,15 @@ if (preg_match('#^/bill/([^/]+)/payment-result/?$#', $path)) {
     }
 }
 
+if (!$isInternalCall && !rate_limit($redis, 100, 60)) {
+    http_response_code(429);
+    echo json_encode([
+        "status" => "ERROR",
+        "message" => "Too many requests"
+    ]);
+    exit;
+}
+
 if (!$isInternalCall) {
     $expectedKongKey = getenv('KONG_API_KEY');
     if ($expectedKongKey && $kongApiKey === $expectedKongKey) {
@@ -67,6 +121,8 @@ if (!$isInternalCall && !$isKongCall) {
     echo json_encode(["status" => "ERROR", "message" => "Forbidden"]);
     exit;
 }
+
+$headers['X-Internal-Source'] = $isInternalCall ? 'HMAC' : 'KONG';
 
 $userId = null;
 $userRole = null;
@@ -105,7 +161,6 @@ if (($method === 'POST' && $isProductRoot) ||
         exit;
     }
 }
-
 
 $headersForBackend = empty($headers) ? new stdClass() : $headers;
 

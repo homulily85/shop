@@ -2,7 +2,6 @@ package com.shop.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.service.ImageStorageService;
-import com.shop.service.RateLimiterService;
 import com.shop.webserver.HttpFileResponse;
 import com.shop.webserver.HttpServer;
 import com.shop.webserver.HttpTextResponse;
@@ -11,23 +10,17 @@ import java.util.Map;
 
 public class ImageStorageController extends AbstractController {
     private final ImageStorageService imageStorageService;
-    private final RateLimiterService rateLimiterService;
     private final ObjectMapper objectMapper;
 
     public ImageStorageController(HttpServer server) {
         super(server);
         this.imageStorageService = ImageStorageService.getInstance();
-        this.rateLimiterService = RateLimiterService.getInstance();
         this.objectMapper = new ObjectMapper();
     }
 
     @Override
     public void registerRoutes() {
         server.addRoute("/images", ((method, queryParams, pathParams, headers, body) -> {
-            if (rateLimiterService.isAllowed(headers.getOrDefault("X-Real-Ip", "unknown-client"))){
-                return errorResponse(429, "Too Many Requests", "You are requesting too fast.");
-            }
-
             if (!"POST".equalsIgnoreCase(method)) {
                 return errorResponse(405, "Method Not Allowed", "Method not allowed");
             }

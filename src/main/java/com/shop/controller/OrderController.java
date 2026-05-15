@@ -2,7 +2,6 @@ package com.shop.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.service.OrderService;
-import com.shop.service.RateLimiterService;
 import com.shop.webserver.HttpServer;
 import com.shop.webserver.HttpTextResponse;
 
@@ -10,13 +9,11 @@ import java.util.Map;
 
 public class OrderController extends AbstractController {
     private final OrderService orderService;
-    private final RateLimiterService rateLimiterService;
     private final ObjectMapper objectMapper;
 
     public OrderController(HttpServer server) {
         super(server);
         this.orderService = OrderService.getInstance();
-        this.rateLimiterService = RateLimiterService.getInstance();
         this.objectMapper = new ObjectMapper();
     }
 
@@ -24,10 +21,6 @@ public class OrderController extends AbstractController {
     public void registerRoutes() {
         server.addRoute("/orders/:id", ((method, queryParams, pathParams, headers, body) -> {
             String orderId = pathParams.get("id");
-            if (rateLimiterService.isAllowed(headers.getOrDefault(orderId != null ? orderId : -1,
-                    "unknown-client"))) {
-                return errorResponse(429, "Too Many Requests", "You are requesting too fast.");
-            }
 
             if (!method.equals("GET")) {
                 return errorResponse(405, "Method Not Allowed", "Method not allowed");
@@ -63,6 +56,10 @@ public class OrderController extends AbstractController {
 
         server.addRoute("/bill/:id/payment-result", ((method, queryParams, pathParams, headers,
                                                       body) -> {
+            if (!headers.containsKey("X-Internal-Source") || !"HMAC".equals(headers.get("X-Internal-Source"))) {
+                return errorResponse(403, "Forbidden", "Internal API only");
+            }
+
             if (!method.equals("POST")) {
                 return errorResponse(405, "Method Not Allowed", "Method not allowed");
             }

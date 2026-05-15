@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.dto.ProductDTO;
 import com.shop.model.Product;
 import com.shop.service.ProductService;
+import com.shop.service.RateLimiterService;
 import com.shop.webserver.HttpTextResponse;
 import com.shop.webserver.HttpServer;
 
@@ -12,17 +13,23 @@ import java.util.Map;
 public class ProductController extends AbstractController {
 
     private final ProductService productService;
+    private final RateLimiterService rateLimiterService;
     private final ObjectMapper objectMapper;
 
     public ProductController(HttpServer server) {
         super(server);
         this.productService = ProductService.getInstance();
+        this.rateLimiterService = RateLimiterService.getInstance();
         this.objectMapper = new ObjectMapper();
     }
 
     @Override
     public void registerRoutes() {
         server.addRoute("/products", (method, queryParams, pathParams, headers, body) -> {
+            if (rateLimiterService.isAllowed(headers.getOrDefault("X-Real-Ip", "unknown-client"))){
+                return errorResponse(429, "Too Many Requests", "You are requesting too fast.");
+            }
+
             if (method.equals("GET")) {
                 if (queryParams.containsKey("status")) {
                     var products = productService.getProductByStatus(queryParams.get("status"));

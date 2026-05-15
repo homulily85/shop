@@ -3,16 +3,19 @@ package com.shop.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.dto.CartItemDTO;
 import com.shop.service.CartService;
-import com.shop.webserver.HttpTextResponse;
+import com.shop.service.RateLimiterService;
 import com.shop.webserver.HttpServer;
+import com.shop.webserver.HttpTextResponse;
 
 public class CartController extends AbstractController {
     private final CartService cartService;
+    private final RateLimiterService rateLimiterService;
     private final ObjectMapper objectMapper;
 
     public CartController(HttpServer server) {
         super(server);
         this.cartService = CartService.getInstance();
+        this.rateLimiterService = RateLimiterService.getInstance();
         this.objectMapper = new ObjectMapper();
     }
 
@@ -20,6 +23,12 @@ public class CartController extends AbstractController {
     public void registerRoutes() {
         server.addRoute("/cart/:id", (method, queryParams, pathParams, headers, body) -> {
             String cartId = pathParams.get("id");
+
+            if (rateLimiterService.isAllowed(headers.getOrDefault(cartId != null ? cartId : -1,
+                    "unknown-client"))) {
+                return errorResponse(429, "Too Many Requests", "You are requesting too fast.");
+            }
+
             if (cartId == null || cartId.isBlank()) {
                 return errorResponse(400, "Bad Request", "Missing cart id");
             }
@@ -30,7 +39,8 @@ public class CartController extends AbstractController {
                     if (cartItems == null) {
                         return new HttpTextResponse(200, "OK", null);
                     }
-                    return new HttpTextResponse(200, "OK", objectMapper.writeValueAsString(cartItems));
+                    return new HttpTextResponse(200, "OK",
+                            objectMapper.writeValueAsString(cartItems));
                 }
 
                 case "POST" -> {

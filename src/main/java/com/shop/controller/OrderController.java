@@ -21,6 +21,11 @@ public class OrderController extends AbstractController {
     public void registerRoutes() {
         server.addRoute("/orders/:id", ((method, queryParams, pathParams, headers, body) -> {
             String orderId = pathParams.get("id");
+            String customerId = headers.get("X-User-Id");
+
+            if (customerId == null || customerId.isBlank()) {
+                return errorResponse(401, "Unauthorized", "Missing user id");
+            }
 
             if (!method.equals("GET")) {
                 return errorResponse(405, "Method Not Allowed", "Method not allowed");
@@ -33,6 +38,10 @@ public class OrderController extends AbstractController {
             var order = orderService.getOrderById(orderId);
             if (order == null) {
                 return errorResponse(404, "Not Found", "Order not found");
+            }
+
+            if (order.customerId() != Long.parseLong(customerId)) {
+                return errorResponse(403, "Forbidden", "You do not have access to this order");
             }
 
             return new HttpTextResponse(200, "OK", objectMapper.writeValueAsString(order));
@@ -56,7 +65,8 @@ public class OrderController extends AbstractController {
 
         server.addRoute("/bill/:id/payment-result", ((method, queryParams, pathParams, headers,
                                                       body) -> {
-            if (!headers.containsKey("X-Internal-Source") || !"HMAC".equals(headers.get("X-Internal-Source"))) {
+            if (!headers.containsKey("X-Internal-Source") || !"HMAC".equals(headers.get("X" +
+                    "-Internal-Source"))) {
                 return errorResponse(403, "Forbidden", "Internal API only");
             }
 

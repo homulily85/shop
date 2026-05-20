@@ -2,11 +2,15 @@ CREATE DATABASE if NOT EXISTS shop;
 
 USE shop;
 
-DROP TABLE if exists products;
-DROP TABLE if exists orders;
 DROP TABLE if exists order_items;
-DROP TABLE if exists carts;
+
+DROP TABLE if exists orders;
+
 DROP TABLE if exists cart_items;
+
+DROP TABLE if exists products;
+
+DROP TABLE if exists carts;
 
 create table if not exists products (
     id bigint auto_increment primary key,

@@ -82,7 +82,7 @@ public class OrderService {
 
         orderRepository.updateTransactionId(newOderId, returnedTransactionId);
 
-        return returnedTransactionId;
+        return newOderId;
     }
 
     public void handleCallback(String orderId, boolean success) {

@@ -5,6 +5,7 @@ import com.shop.controller.CartController;
 import com.shop.controller.OrderController;
 import com.shop.controller.ProductController;
 import com.shop.controller.ImageStorageController;
+import com.shop.database.DatabaseManager;
 import com.shop.scheduler.JobScheduler;
 import com.shop.webserver.HttpTextResponse;
 import com.shop.webserver.HttpServer;
@@ -19,7 +20,16 @@ public class Main {
 
         JobScheduler jobScheduler = new JobScheduler();
         jobScheduler.startJobs();
-        Runtime.getRuntime().addShutdownHook(new Thread(jobScheduler::shutdown));
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("Shutting down application...");
+
+            jobScheduler.shutdown();
+
+            DatabaseManager.shutdown();
+
+            System.out.println("Shutdown complete.");
+        }));
 
         server.addRoute("/test",
                 (method, queryParams, pathParams, headers, body) -> {

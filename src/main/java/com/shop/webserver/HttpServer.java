@@ -3,19 +3,28 @@ package com.shop.webserver;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.Iterator;
 
 public class HttpServer {
     private final Map<String, RequestHandler> routes;
-    private final ServerSocket serverSocket;
+    private final ServerSocketChannel serverChannel;
 
     public HttpServer(int port) throws IOException {
-        this.serverSocket = new ServerSocket(port);
+        this.serverChannel = ServerSocketChannel.open();
+        this.serverChannel.configureBlocking(false);
+        this.serverChannel.bind(new InetSocketAddress(port));
         this.routes = new HashMap<>();
     }
 
@@ -143,51 +152,135 @@ public class HttpServer {
      * client requests.
      */
     public void start() throws IOException {
-        System.out.println("HTTP Server started on port " + serverSocket.getLocalPort());
+        int port = ((InetSocketAddress) serverChannel.getLocalAddress()).getPort();
+        System.out.println("HTTP Server started on port " + port);
 
-        while (true) {
-            Socket clientSocket = serverSocket.accept();
-            new Thread(() -> handleClient(clientSocket)).start();
+        try (Selector selector = Selector.open()) {
+            serverChannel.register(selector, SelectionKey.OP_ACCEPT);
+
+            while (true) {
+                selector.select();
+                Set<SelectionKey> selectedKeys = selector.selectedKeys();
+                Iterator<SelectionKey> iterator = selectedKeys.iterator();
+
+                while (iterator.hasNext()) {
+                    SelectionKey key = iterator.next();
+                    iterator.remove();
+
+                    if (!key.isValid()) {
+                        continue;
+                    }
+
+                    if (key.isAcceptable()) {
+                        acceptClient(selector);
+                    } else if (key.isReadable()) {
+                        readClientRequest(key);
+                    } else if (key.isWritable()) {
+                        writeClientResponse(key);
+                    }
+                }
+            }
         }
     }
 
-    /**
-     * Handles an individual client connection by reading the incoming HTTP request, dispatching
-     * it to the appropriate handler,
-     * and sending back the HTTP response.
-     *
-     * @param clientSocket The socket representing the client connection.
-     */
-    private void handleClient(Socket clientSocket) {
-        try (clientSocket;
-             BufferedReader in =
-                     new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-             BufferedWriter out =
-                     new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()))
-        ) {
-            String requestLine = in.readLine();
-            System.out.println("Request: " + requestLine);
+    private void acceptClient(Selector selector) throws IOException {
+        SocketChannel clientChannel = serverChannel.accept();
+        if (clientChannel == null) {
+            return;
+        }
 
-            if (requestLine == null || requestLine.isEmpty()) return;
+        clientChannel.configureBlocking(false);
+        clientChannel.register(selector, SelectionKey.OP_READ, new ClientState());
+    }
 
-            ObjectMapper objectMapper = new ObjectMapper();
+    private void readClientRequest(SelectionKey key) {
+        SocketChannel channel = (SocketChannel) key.channel();
+        ClientState state = (ClientState) key.attachment();
 
-            HttpResponse responseData;
-            try {
-                HttpRequest httpRequest = objectMapper.readValue(requestLine, HttpRequest.class);
-                responseData = dispatch(httpRequest);
-            } catch (Exception e) {
-                responseData = errorResponse(400, "Bad Request",
-                        e.getMessage() != null ? e.getMessage() : "Invalid request data",
-                        objectMapper);
+        try {
+            int bytesRead = channel.read(state.readBuffer);
+            if (bytesRead == -1) {
+                if (state.inbound.length() == 0) {
+                    closeChannel(key, channel);
+                } else {
+                    String requestLine = state.inbound.toString().trim();
+                    state.inbound.setLength(0);
+                    processRequestLine(requestLine, key, channel, state);
+                }
+                return;
             }
 
-            String httpResponseString = objectMapper.writeValueAsString(responseData);
+            state.readBuffer.flip();
+            state.inbound.append(StandardCharsets.UTF_8.decode(state.readBuffer));
+            state.readBuffer.clear();
 
-            out.write(httpResponseString);
-            out.flush();
+            int newlineIndex = state.inbound.indexOf("\n");
+            if (newlineIndex == -1) {
+                return;
+            }
+
+            String requestLine = state.inbound.substring(0, newlineIndex).trim();
+            state.inbound.delete(0, newlineIndex + 1);
+            processRequestLine(requestLine, key, channel, state);
         } catch (Exception e) {
             e.printStackTrace();
+            closeChannel(key, channel);
         }
+    }
+
+    private void writeClientResponse(SelectionKey key) {
+        SocketChannel channel = (SocketChannel) key.channel();
+        ClientState state = (ClientState) key.attachment();
+
+        try {
+            if (state.outbound != null) {
+                channel.write(state.outbound);
+            }
+
+            if (state.outbound == null || !state.outbound.hasRemaining()) {
+                closeChannel(key, channel);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            closeChannel(key, channel);
+        }
+    }
+
+    private void closeChannel(SelectionKey key, SocketChannel channel) {
+        try {
+            key.cancel();
+            channel.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void processRequestLine(String requestLine, SelectionKey key,
+                                    SocketChannel channel, ClientState state) throws IOException {
+        if (requestLine.isEmpty()) {
+            closeChannel(key, channel);
+            return;
+        }
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        HttpResponse responseData;
+        try {
+            HttpRequest httpRequest = objectMapper.readValue(requestLine, HttpRequest.class);
+            responseData = dispatch(httpRequest);
+        } catch (Exception e) {
+            responseData = errorResponse(400, "Bad Request",
+                    e.getMessage() != null ? e.getMessage() : "Invalid request data",
+                    objectMapper);
+        }
+
+        String httpResponseString = objectMapper.writeValueAsString(responseData);
+        state.outbound = StandardCharsets.UTF_8.encode(httpResponseString);
+        key.interestOps(SelectionKey.OP_WRITE);
+    }
+
+    private static final class ClientState {
+        private final StringBuilder inbound = new StringBuilder();
+        private final ByteBuffer readBuffer = ByteBuffer.allocate(8192);
+        private ByteBuffer outbound;
     }
 }

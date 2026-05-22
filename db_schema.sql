@@ -1,5 +1,4 @@
-CREATE DATABASE if NOT EXISTS shop;
-
+-- Active: 1778237870132@@127.0.0.1@33061@shop
 USE shop;
 
 DROP TABLE if exists order_items;
@@ -41,9 +40,9 @@ INSERT INTO
 VALUES (
         1,
         'Sony WH-1000XM5 Wireless Headphones',
-        336636,
+        1,
         'Industry-leading noise canceling headphones with exceptional sound quality.',
-        50,
+        99999999,
         'Electronics',
         'POPULAR',
         'https://example.com/images/sony-wh1000xm5.jpg',
@@ -67,9 +66,9 @@ INSERT INTO
 VALUES (
         2,
         'Men\'s Classic Cotton Crewneck T-Shirt',
-        1999,
+        1,
         '100% organic cotton everyday basic t-shirt in navy blue.',
-        200,
+        99999999,
         'Apparel',
         'POPULAR',
         'https://example.com/images/mens-navy-tee.jpg',
@@ -93,9 +92,9 @@ INSERT INTO
 VALUES (
         3,
         'Bonavita Connoisseur 8-Cup Coffee Maker',
-        18999,
+        1,
         'One-touch pour-over style coffee maker with thermal carafe.',
-        50,
+        99999999,
         'Home & Kitchen',
         'OUT_OF_STOCK',
         'https://example.com/images/bonavita-coffee.jpg',
@@ -119,9 +118,9 @@ INSERT INTO
 VALUES (
         4,
         'The Pragmatic Programmer: 20th Anniversary',
-        3995,
+        1,
         'A definitive guide to software development and best practices.',
-        50,
+        99999999,
         'Books',
         'POPULAR',
         'https://example.com/images/pragmatic-programmer.jpg',
@@ -145,9 +144,9 @@ INSERT INTO
 VALUES (
         5,
         'Minimalist Leather Bifold Wallet',
-        4500,
+        1,
         null,
-        100,
+        99999999,
         'Accessories',
         'POPULAR',
         null,

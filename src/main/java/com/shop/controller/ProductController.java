@@ -24,17 +24,14 @@ public class ProductController extends AbstractController {
     public void registerRoutes() {
         server.addRoute("/products", (method, queryParams, pathParams, headers, body) -> {
             if (method.equals("GET")) {
-                if (queryParams.containsKey("status")) {
-                    var products = productService.getProductByStatus(queryParams.get("status"));
-                    return new HttpTextResponse(200, "OK", objectMapper.writeValueAsString(products));
-                }
+                String status = queryParams.get("status");
 
-                int pageNumber = 0;
-                int pageSize = 10;
+                Integer pageNumberInput = null;
+                Integer pageSizeInput = null;
 
                 if (queryParams.containsKey("pageNumber")) {
                     try {
-                        pageNumber = Integer.parseInt(queryParams.get("pageNumber"));
+                        pageNumberInput = Integer.parseInt(queryParams.get("pageNumber"));
                     } catch (NumberFormatException e) {
                         return errorResponse(400, "Bad Request", "Invalid pageNumber");
                     }
@@ -42,10 +39,65 @@ public class ProductController extends AbstractController {
 
                 if (queryParams.containsKey("pageSize")) {
                     try {
-                        pageSize = Integer.parseInt(queryParams.get("pageSize"));
+                        pageSizeInput = Integer.parseInt(queryParams.get("pageSize"));
                     } catch (NumberFormatException e) {
                         return errorResponse(400, "Bad Request", "Invalid pageSize");
                     }
+                }
+
+                boolean hasPagingParams = pageNumberInput != null || pageSizeInput != null;
+
+                int pageNumber = pageNumberInput != null ? pageNumberInput : 0;
+                int pageSize = pageSizeInput != null ? pageSizeInput : 10;
+
+                if (status != null) {
+                    if (hasPagingParams) {
+                        if (pageNumber < 0) {
+                            return errorResponse(400, "Bad Request", "pageNumber must be >= 0");
+                        }
+                        if (pageSize <= 0) {
+                            return errorResponse(400, "Bad Request", "pageSize must be > 0");
+                        }
+                    }
+
+                    String sortBy = queryParams.getOrDefault("sortBy", "id");
+                    String sortOrder = queryParams.getOrDefault("sortOrder", "asc");
+
+                    if (sortBy.isBlank()) {
+                        return errorResponse(400, "Bad Request", "sortBy must not be blank");
+                    }
+
+                    if (!sortOrder.equalsIgnoreCase("asc") && !sortOrder.equalsIgnoreCase("desc")) {
+                        return errorResponse(400, "Bad Request", "sortOrder must be 'asc' or 'desc'");
+                    }
+
+                    var products = hasPagingParams
+                            ? productService.getProductByStatus(status, pageNumber, pageSize, sortBy, sortOrder)
+                            : productService.getProductByStatusSorted(status, sortBy, sortOrder);
+
+                    long totalItems = productService.getProductCountByStatus(status);
+                    int responsePageNumber = hasPagingParams ? pageNumber : 0;
+                    int responsePageSize = hasPagingParams ? pageSize : products.size();
+                    int totalPages = responsePageSize == 0 ? 0
+                            : (int) Math.ceil((double) totalItems / responsePageSize);
+                    int pagesLeft = Math.max(0, totalPages - (responsePageNumber + 1));
+
+                    var responseBody = Map.of(
+                            "data", products,
+                            "pagination", Map.of(
+                                    "pageNumber", responsePageNumber,
+                                    "pageSize", responsePageSize,
+                                    "totalItems", totalItems,
+                                    "totalPages", totalPages,
+                                    "pagesLeft", pagesLeft
+                            ),
+                            "sorting", Map.of(
+                                    "sortBy", sortBy,
+                                    "sortOrder", sortOrder
+                            )
+                    );
+
+                    return new HttpTextResponse(200, "OK", objectMapper.writeValueAsString(responseBody));
                 }
 
                 if (pageNumber < 0) {

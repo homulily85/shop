@@ -9,6 +9,7 @@ import com.shop.repository.ProductRepository;
 import redis.clients.jedis.RedisClient;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +53,20 @@ public class ProductService {
     public List<Product> getAllProducts(int pageNumber, int pageSize, String sortBy,
                                         String sortOrder) {
         return productRepository.getAllProducts(pageNumber, pageSize, sortBy, sortOrder);
+    }
+
+    /**
+     * Get the total number of products by status.
+     *
+     * @param status Product status to filter by.
+     * @return Total product count by status.
+     */
+    public long getProductCountByStatus(String status) {
+        if (status.equalsIgnoreCase("popular")) {
+            return getPopularProducts().size();
+        }
+
+        return productRepository.getProductCountByStatus(status);
     }
 
     /**
@@ -112,6 +127,45 @@ public class ProductService {
         }
 
         return productRepository.getProductByStatus(status);
+    }
+
+    /**
+     * Get products by status with pagination and sorting. If status is "popular", it will
+     * use the cached list and apply sorting/pagination in memory.
+     *
+     * @param status Product status to filter by.
+     * @param pageNumber Page index to retrieve.
+     * @param pageSize Number of items per page.
+     * @param sortBy Field to sort by.
+     * @param sortOrder Direction of sort ("asc" or "desc").
+     * @return List of products with the given status.
+     */
+    public List<Product> getProductByStatus(String status, int pageNumber, int pageSize,
+                                            String sortBy, String sortOrder) {
+        if (status.equalsIgnoreCase("popular")) {
+            var sortedProducts = sortProducts(getPopularProducts(), sortBy, sortOrder);
+            return paginateProducts(sortedProducts, pageNumber, pageSize);
+        }
+
+        return productRepository.getProductByStatus(status, pageNumber, pageSize, sortBy,
+                sortOrder);
+    }
+
+    /**
+     * Get products by status sorted without pagination. If status is "popular", it will
+     * use the cached list and apply sorting in memory.
+     *
+     * @param status Product status to filter by.
+     * @param sortBy Field to sort by.
+     * @param sortOrder Direction of sort ("asc" or "desc").
+     * @return List of products with the given status.
+     */
+    public List<Product> getProductByStatusSorted(String status, String sortBy, String sortOrder) {
+        if (status.equalsIgnoreCase("popular")) {
+            return sortProducts(getPopularProducts(), sortBy, sortOrder);
+        }
+
+        return productRepository.getProductByStatusSorted(status, sortBy, sortOrder);
     }
 
     /**
@@ -178,6 +232,30 @@ public class ProductService {
         productRepository.deleteAProduct(productId);
 
         redisClient.del(POPULAR_HASH_KEY);
+    }
+
+    private List<Product> sortProducts(List<Product> products, String sortBy, String sortOrder) {
+        Comparator<String> nullableStringComparator = Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER);
+        Comparator<Product> comparator = switch (sortBy != null ? sortBy : "") {
+            case "title" -> Comparator.comparing(Product::title, nullableStringComparator);
+            case "price" -> Comparator.comparingLong(Product::price);
+            case "availableQuantity" -> Comparator.comparingLong(Product::availableQuantity);
+            case "category" -> Comparator.comparing(Product::category, nullableStringComparator);
+            case "status" -> Comparator.comparing(Product::status, nullableStringComparator);
+            default -> Comparator.comparingLong(Product::id);
+        };
+
+        if ("desc".equalsIgnoreCase(sortOrder)) {
+            comparator = comparator.reversed();
+        }
+
+        return products.stream().sorted(comparator).toList();
+    }
+
+    private List<Product> paginateProducts(List<Product> products, int pageNumber, int pageSize) {
+        int startIndex = Math.min(pageNumber * pageSize, products.size());
+        int endIndex = Math.min(startIndex + pageSize, products.size());
+        return new ArrayList<>(products.subList(startIndex, endIndex));
     }
 
     private static class Holder {

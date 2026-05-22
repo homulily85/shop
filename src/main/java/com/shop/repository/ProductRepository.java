@@ -71,19 +71,33 @@ public class ProductRepository {
      * @return List of products.
      */
     public List<Product> getAllProducts(int pageNumber, int pageSize, String sortBy, String sortOrder) {
-        String column = switch (sortBy != null ? sortBy : "") {
-            case "title" -> TITLE;
-            case "price" -> PRICE;
-            case "availableQuantity" -> QUANTITY;
-            case "category" -> CATEGORY;
-            case "status" -> STATUS;
-            default -> ID;
-        };
-
-        String direction = "desc".equalsIgnoreCase(sortOrder) ? "DESC" : "ASC";
+        String column = resolveSortColumn(sortBy);
+        String direction = resolveSortDirection(sortOrder);
 
         String sql = "SELECT * FROM %s ORDER BY %s %s LIMIT ? OFFSET ?".formatted(TABLE_NAME, column, direction);
         return executeProductQuery(sql, pageSize, pageNumber * pageSize);
+    }
+
+    /**
+     * Get the total count of products by status.
+     *
+     * @param status Product status.
+     * @return Total number of products with the given status.
+     */
+    public long getProductCountByStatus(String status) {
+        String sql = "SELECT COUNT(*) FROM %s WHERE %s = ?".formatted(TABLE_NAME, STATUS);
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement query = connection.prepareStatement(sql)) {
+            query.setObject(1, status);
+            try (ResultSet resultSet = query.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getLong(1);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
     }
 
     /**
@@ -106,6 +120,43 @@ public class ProductRepository {
      */
     public List<Product> getProductByStatus(String status) {
         String sql = "SELECT * FROM %s WHERE %s = ?".formatted(TABLE_NAME, STATUS);
+        return executeProductQuery(sql, status);
+    }
+
+    /**
+     * Get products by status with pagination and sorting.
+     *
+     * @param status Product status.
+     * @param pageNumber Page index to retrieve.
+     * @param pageSize Number of items per page.
+     * @param sortBy Field to sort by.
+     * @param sortOrder Direction of sort ("asc" or "desc").
+     * @return List of products with the given status.
+     */
+    public List<Product> getProductByStatus(String status, int pageNumber, int pageSize,
+                                            String sortBy, String sortOrder) {
+        String column = resolveSortColumn(sortBy);
+        String direction = resolveSortDirection(sortOrder);
+
+        String sql = "SELECT * FROM %s WHERE %s = ? ORDER BY %s %s LIMIT ? OFFSET ?"
+                .formatted(TABLE_NAME, STATUS, column, direction);
+        return executeProductQuery(sql, status, pageSize, pageNumber * pageSize);
+    }
+
+    /**
+     * Get products by status sorted without pagination.
+     *
+     * @param status Product status.
+     * @param sortBy Field to sort by.
+     * @param sortOrder Direction of sort ("asc" or "desc").
+     * @return List of products with the given status.
+     */
+    public List<Product> getProductByStatusSorted(String status, String sortBy, String sortOrder) {
+        String column = resolveSortColumn(sortBy);
+        String direction = resolveSortDirection(sortOrder);
+
+        String sql = "SELECT * FROM %s WHERE %s = ? ORDER BY %s %s"
+                .formatted(TABLE_NAME, STATUS, column, direction);
         return executeProductQuery(sql, status);
     }
 
@@ -222,6 +273,21 @@ public class ProductRepository {
         }
 
         return result;
+    }
+
+    private String resolveSortColumn(String sortBy) {
+        return switch (sortBy != null ? sortBy : "") {
+            case "title" -> TITLE;
+            case "price" -> PRICE;
+            case "availableQuantity" -> QUANTITY;
+            case "category" -> CATEGORY;
+            case "status" -> STATUS;
+            default -> ID;
+        };
+    }
+
+    private String resolveSortDirection(String sortOrder) {
+        return "desc".equalsIgnoreCase(sortOrder) ? "DESC" : "ASC";
     }
 
     // "Bill Pugh" Singleton to ensure thread safe.

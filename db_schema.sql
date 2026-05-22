@@ -96,7 +96,7 @@ VALUES (
         'One-touch pour-over style coffee maker with thermal carafe.',
         99999999,
         'Home & Kitchen',
-        'OUT_OF_STOCK',
+        'NEW',
         'https://example.com/images/bonavita-coffee.jpg',
         '2026-05-06 03:44:29',
         '2026-05-06 07:31:43'

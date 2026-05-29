@@ -41,6 +41,8 @@ services:
     environment:
       MARIADB_ROOT_PASSWORD: root
       MARIADB_DATABASE: shop
+    ports:
+      - "33061:3306"
     volumes:
       - shop_db_data:/var/lib/mysql
       - ./db_schema.sql:/docker-entrypoint-initdb.d/schema.sql
